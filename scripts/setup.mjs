@@ -1,9 +1,12 @@
 // J-me setup: one command after `npm install`.
-//   node scripts/setup.mjs            default brain (qwen2.5:7b, needs ~6 GB of GPU memory)
-//   node scripts/setup.mjs --small    smaller brain (qwen2.5:3b) for laptops without a GPU
+//   node scripts/setup.mjs            looks at the GPU and picks the brain: qwen2.5:7b with
+//                                     6 GB or more of GPU memory, qwen2.5:3b otherwise
+//   node scripts/setup.mjs --small    force the smaller brain
+//   node scripts/setup.mjs --large    force the 7B brain
 // Downloads the two on-device speech models (~250 MB) into models/, checks that Ollama is
-// installed and running, and pulls the brain model. Safe to run again; it skips what is there.
-import { existsSync, mkdirSync, createWriteStream, rmSync } from 'node:fs';
+// installed and running, pulls the brain, and writes the choice to jme.local.json so the
+// engine uses it. Safe to run again; it skips what is there.
+import { existsSync, mkdirSync, createWriteStream, rmSync, writeFileSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import { spawnSync } from 'node:child_process';
@@ -13,8 +16,26 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MODELS = path.join(ROOT, 'models');
 const BASE = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/';
-const small = process.argv.includes('--small');
-const BRAIN = process.env.JME_MODEL || (small ? 'qwen2.5:3b' : 'qwen2.5:7b');
+const LARGE = 'qwen2.5:7b', SMALL = 'qwen2.5:3b';
+
+/** GPU memory in MB, or 0 when there is no NVIDIA GPU to ask (Ollama then runs on the CPU). */
+function gpuMemoryMb() {
+  const r = spawnSync('nvidia-smi', ['--query-gpu=name,memory.total', '--format=csv,noheader'], { encoding: 'utf8' });
+  if (r.error || r.status !== 0 || !r.stdout) return { name: null, mb: 0 };
+  const line = r.stdout.trim().split(/\r?\n/)[0];
+  const m = line.match(/^(.*),\s*(\d+)\s*MiB/);
+  return m ? { name: m[1].trim(), mb: Number(m[2]) } : { name: line, mb: 0 };
+}
+
+let BRAIN = process.env.JME_MODEL;
+let reason = BRAIN ? `JME_MODEL is set` : '';
+if (!BRAIN && process.argv.includes('--small')) { BRAIN = SMALL; reason = '--small'; }
+if (!BRAIN && process.argv.includes('--large')) { BRAIN = LARGE; reason = '--large'; }
+if (!BRAIN) {
+  const gpu = gpuMemoryMb();
+  if (gpu.mb >= 6000) { BRAIN = LARGE; reason = `${gpu.name}, ${Math.round(gpu.mb / 1024)} GB`; }
+  else { BRAIN = SMALL; reason = gpu.name ? `${gpu.name} has only ${Math.round(gpu.mb / 1024)} GB` : 'no NVIDIA GPU found, so the brain runs on the CPU'; }
+}
 const OLLAMA = process.env.JME_OLLAMA || 'http://127.0.0.1:11434';
 
 const say = (s) => console.log(s);
@@ -62,7 +83,8 @@ async function brain() {
 say('J-me setup');
 say('speech (on device):');
 await speechModels();
-say('brain (on device, via Ollama):');
+say(`brain (on device, via Ollama): ${BRAIN}  (${reason})`);
 await brain();
+writeFileSync(path.join(ROOT, 'jme.local.json'), JSON.stringify({ model: BRAIN }, null, 2) + '\n');
+say('  written to jme.local.json; the engine uses it. Re-run with --small or --large to change.');
 say(`\nReady. Start J-me with J-me.cmd (Windows) or ./jme.sh (macOS, Linux).`);
-if (BRAIN !== 'qwen2.5:7b') say(`The engine uses ${BRAIN} when JME_MODEL=${BRAIN} is set, or with --model ${BRAIN}.`);

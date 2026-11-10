@@ -24,14 +24,15 @@ launchers are included but less exercised. See [docs/HOW_TO_USE.md](docs/HOW_TO_
 ## Install
 
 You need [Node.js](https://nodejs.org) 24 or newer and [Ollama](https://ollama.com).
-A GPU with about 6 GB of memory makes it feel instant; without one, use `--small`.
+A GPU with about 6 GB of memory makes it feel instant; without one it still works with the
+smaller brain, which setup picks for you.
 
 ```
 git clone https://github.com/jmecompanion1234-afk/J-me.git
 cd J-me
 npm install
-npm run setup            # downloads the speech models (~250 MB) and pulls the brain
-                         # npm run setup -- --small   for machines without a GPU
+npm run setup            # downloads the speech models (~250 MB), looks at the GPU,
+                         # and pulls the brain that fits (7B with 6 GB+ of GPU memory, else 3B)
 ```
 
 Then:

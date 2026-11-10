@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Mode } from './types.ts';
 import { serve } from './server.ts';
@@ -22,7 +23,7 @@ options
   --every SEC              seconds of transcript between anticipator calls (default 15)
   --window SEC             seconds of transcript the anticipator sees (default 60)
   --limit SEC              backtest only: stop after this much transcript
-  --model NAME             Ollama model (default qwen2.5:7b, or $JME_MODEL)
+  --model NAME             Ollama model (default: what setup chose in jme.local.json, else qwen2.5:7b)
   --port N                 live only (default 8787)
   --host ADDR              live only (default 127.0.0.1; 0.0.0.0 to reach it from other devices)
 `;
@@ -51,7 +52,11 @@ async function main(): Promise<void> {
   }
   const backtest = arg('backtest');
   const mode = (arg('mode') as Mode | undefined) ?? (backtest ? 'media' : 'room');
-  const anticipator = arg('model') ? { model: arg('model') } : {};
+  // Brain: --model, else $JME_MODEL, else what setup wrote to jme.local.json, else the 7B default.
+  let localModel: string | undefined;
+  try { localModel = JSON.parse(readFileSync(path.join(ROOT, 'jme.local.json'), 'utf8')).model; } catch {}
+  const model = arg('model') ?? process.env.JME_MODEL ?? localModel;
+  const anticipator = model ? { model } : {};
   const windowSec = Number(arg('window') ?? 60);
   const anticipateEvery = Number(arg('every') ?? 15);
   let docs: LocalDocs | undefined;
