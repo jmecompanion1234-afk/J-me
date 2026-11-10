@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>J-me</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">J-me <span id="status" class="status">idle</span></div>
+  <div class="controls">
+    <select id="source" class="source" title="What to listen to">
+      <option value="media">Media (a tab, a window, or the screen)</option>
+      <option value="mic">The room (microphone)</option>
+      <option value="both">Speakers and mic (entire screen with system audio, plus the room)</option>
+    </select>
+    <button id="float" class="btn float hidden" title="Pop J-me out into a small window that stays on top of the video">Float ↗</button>
+    <label class="switch" title="Listen">
+      <input id="listen" type="checkbox" role="switch" aria-label="Listen">
+      <span class="track"><span class="knob"></span></span>
+    </label>
+  </div>
+</header>
+
+<main>
+  <section id="queue" class="queue" aria-label="Staged items"></section>
+
+  <aside id="panel" class="panel hidden" aria-label="Pulled up">
+    <button id="close" class="close" aria-label="Close">×</button>
+    <div id="panel-body"></div>
+  </aside>
+</main>
+
+<footer>
+  <div id="transcript" class="transcript" aria-label="Last minute of transcript"></div>
+  <form id="ask" class="ask">
+    <input id="ask-text" type="text" placeholder="Ask something… it jumps the queue" autocomplete="off">
+    <button class="btn" type="submit">Ask</button>
+  </form>
+</footer>
+
+<div id="home" class="home hidden">
+  <p>J-me is floating over your video.</p>
+  <button id="dock" class="btn ghost">Bring it back here</button>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
