@@ -20,7 +20,7 @@ patent.
 - [ ] README install path works from a `git clone` by someone who has never seen it.
 - [x] Release `v0.1.0` tagged, with a zipped `extension/` attached for people who do not
       want to clone.
-- [ ] Release `v0.2.0`: the extension runs everything in the browser (2026-11-10). The
+- [x] Release `v0.2.0`: the extension runs everything in the browser (2026-11-10). The
       zip is the product now; the clone is the developer path. The maintainer's ruling: "lets try
       2 with 1 and 3 as backup" (2 = everything in the extension, 1 = a hosted page,
       3 = a one-file tray installer).
