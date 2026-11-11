@@ -24,9 +24,12 @@ patent.
       zip is the product now; the clone is the developer path. The maintainer's ruling: "lets try
       2 with 1 and 3 as backup" (2 = everything in the extension, 1 = a hosted page,
       3 = a one-file tray installer).
-- [ ] the maintainer tests the built-in Chrome brain and real tab capture by hand in his Chrome
-      (the test harness cannot: branded Chrome ignores unpacked extensions from the
-      command line, and tab capture needs a real click).
+- [x] Real tab capture works in the maintainer's Chrome 157 (2026-11-11, after two fixes only a real
+      click could find: no `chrome.storage` in an offscreen document, and the tab stream
+      must be taken before the models load). The brain was Ollama because it was running.
+- [ ] the maintainer tests the built-in Chrome brain by hand (quit Ollama first, or set
+      `brainOrder` to `['builtin']`); the harness cannot, branded Chrome ignores
+      unpacked extensions from the command line.
 
 ## 2. Where, in order
 
