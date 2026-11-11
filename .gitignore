@@ -25,3 +25,9 @@ Thumbs.db
 
 # session logs and backtest maps stay on the device
 sessions/
+
+# the extension ships its runtime files
+!extension/vendor/*.onnx
+
+# Chrome writes this into an unpacked extension folder
+extension/_metadata/

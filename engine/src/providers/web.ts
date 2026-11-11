@@ -16,7 +16,10 @@ export async function webSearch(query: string, max = 5, timeoutMs = 10_000): Pro
       signal: ctrl.signal,
     });
     if (!res.ok) throw new Error(`duckduckgo ${res.status}`);
-    return parseDdg(await res.text(), max);
+    const html = await res.text();
+    // 202 with no results is the engine's bot challenge page, not an empty answer.
+    if (res.status === 202 && !/result__a/.test(html)) throw new Error('duckduckgo challenge (202)');
+    return parseDdg(html, max);
   } finally {
     clearTimeout(timer);
   }

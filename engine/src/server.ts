@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { EngineEvent, Mode } from './types.ts';
-import { Engine } from './engine.ts';
+import { Engine, type EngineOptions } from './engine.ts';
 import { LiveSource } from './sources/live.ts';
 import { SessionLog, newSessionId } from './session_log.ts';
 import { LocalDocs } from './providers/localdocs.ts';
@@ -16,6 +16,8 @@ export interface ServeOptions {
   sessionsDir: string;
   mode: Mode;
   docsDir?: string;
+  /** brain, window and cadence; mode and docs come from the fields above */
+  engine?: Partial<EngineOptions>;
   log: (line: string) => void;
 }
 
@@ -41,7 +43,7 @@ export async function serve(o: ServeOptions): Promise<void> {
     const n = await docs.index();
     o.log(`local docs: ${n} chunks indexed from ${o.docsDir}`);
   }
-  const engine = new Engine({ mode: o.mode, docs });
+  const engine = new Engine({ ...(o.engine ?? {}), mode: o.mode, docs });
   const started = Date.now();
   const clock = () => (Date.now() - started) / 1000;
   const sockets = new Set<WebSocket>();

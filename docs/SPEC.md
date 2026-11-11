@@ -210,6 +210,17 @@ whatever media is chosen. What that means for each shape:
   offscreen page turns it into 16 kHz PCM for the engine's socket (and plays it back so
   the tab stays audible), and an injected overlay draws the queue on the page itself,
   draggable, following the player into fullscreen. No page to open, nothing to pick.
+- **Everything in the extension (ruled and built 2026-11-10, `extension/src/`).** Asked
+  for the most accessible version, the maintainer ruled "lets try 2 with 1 and 3 as backup": 2 =
+  the extension does everything itself, 1 = a hosted page (breaks the local rule), 3 =
+  the tray installer. So the offscreen page now runs the ear (Silero VAD + Moonshine via
+  onnxruntime-web and transformers.js, WebGPU or wasm), the same engine core, and a brain
+  chosen in order: Ollama on the machine, the browser's built-in model (Prompt API), or
+  WebLLM Qwen 2.5 3B. Nothing to install but the extension. Known costs: the in-browser
+  brain is 30 to 45 s per call on an integrated GPU; WebLLM and an ORT WebGPU session
+  cannot share the adapter, so speech runs on wasm when WebLLM is the brain; the search
+  engine's HTML page refuses extension requests, so browser lookups use Wikipedia and the
+  DuckDuckGo Instant Answer API. The Node engine remains the bigger-brain path.
 - **Desktop app (Phase B, Tauri).** The switch lives in the tray; on means "everything
   playing on this machine" through system-audio loopback, so any player or meeting app
   works without a browser. The engine installs once with the app and starts with it.

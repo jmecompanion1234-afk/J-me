@@ -4,63 +4,80 @@ J-me listens to whatever is playing or being said, and keeps a short queue of th
 searches and questions the conversation is about to need. Items fade as the talk moves
 on. Anything still in the queue is one tap away, with the links already fetched.
 
-There are three ways to switch it on. All three feed the same engine on the laptop.
+There are three ways to switch it on. The first needs nothing installed but the extension.
 
-## 1. The browser switch (the one to use for videos and calls)
+## 1. The browser switch (the one to use)
 
-Works in Chrome and Edge on the laptop, on any tab: YouTube, a podcast site, a web call.
+Works in Chrome and Edge, on any tab: YouTube, a podcast site, a web call. Everything
+runs inside the browser: the ear, the brain and the queue. There is no program to start.
 
-1. Start the engine: double-click `J-me.cmd` in the J-me folder. A small window
-   titled "J-me engine" opens and stays minimized. Leave it.
-2. On the tab with the video or call, click the yellow **J-me** icon in the toolbar.
-   The badge reads **ON** and a J-me panel appears in the corner of the page.
-3. Watch. Cards appear a few seconds behind the talk and fade as it moves on.
+**Loading the extension, once.** Unzip the release (or clone the repository). In Chrome
+open `chrome://extensions` (Edge: `edge://extensions`), turn on **Developer mode** (top
+right), press **Load unpacked**, and choose the `extension` folder. Pin the J-me icon to
+the toolbar. Right after install J-me downloads its models in the background, once:
+about 100 MB for speech and, unless the browser has a built-in model or Ollama is running,
+about 1 GB for the brain. Give it a few minutes on first install.
+
+Then, every time:
+
+1. On the tab with the video or call, click the yellow **J-me** icon in the toolbar.
+   The badge reads **ON** and a J-me panel appears in the corner of the page. The panel's
+   status line names the ear and the brain in use.
+2. Watch. Cards appear a few seconds to half a minute behind the talk, depending on the
+   brain, and fade as it moves on.
    - Tap a card to open its links.
    - Star a card to keep it from fading.
    - Type in the Ask bar to jump the queue with your own question.
    - Drag the panel by its title bar. The dash collapses it, the × hides it.
    - If the player goes fullscreen, the panel comes along.
-4. Click the icon again to stop.
+3. Click the icon again to stop.
 
 The tab keeps playing out loud the whole time.
 
-**Loading the extension, once.** In Chrome open `chrome://extensions` (Edge:
-`edge://extensions`), turn on **Developer mode** (top right), press **Load unpacked**,
-and choose the `extension` folder inside your J-me clone. Pin the J-me icon
-to the toolbar. If the badge shows **!** after a click, hover the icon: the tooltip says
-why, usually that the engine is not running.
+**Which brain.** J-me picks the best brain it can find, in this order:
 
-## 2. The page switch (any source, including the room)
+1. **Ollama on this machine**, when it is running with a model pulled (the developer
+   install below gives you this: the 7B brain, the one J-me was tuned on).
+2. **The browser's built-in model** (Chrome 138 or newer on a machine Chrome judges
+   able to run it; Chrome downloads it once).
+3. **A small model inside the browser** (Qwen 2.5 1.5B through WebLLM, on the GPU
+   through WebGPU). The fallback that works anywhere with WebGPU. Slower and simpler
+   than the others: expect cards 15 to 40 seconds behind the talk.
+
+To force one, open the extension's service worker console (chrome://extensions →
+J-me → "service worker") and run, for example,
+`chrome.storage.local.set({ brainOrder: ['webllm'] })`. (A settings page is coming.)
+
+**Web lookups in the browser** use Wikipedia and DuckDuckGo's Instant Answer API, both
+open. The developer install also runs full web searches.
+
+## 2. The page switch (any source, including the room; needs the developer install)
 
 1. Double-click `J-me.cmd`. The queue page opens at http://localhost:8787.
 2. Pick a source:
    - **Media**: one tab, window or screen. The browser asks which; tick "share audio".
    - **The room**: the laptop microphone.
    - **Speakers and mic**: everything coming out of the speakers plus the room. Pick
-     "Entire screen" and tick "Share system audio". Good for a call or a watch-along.
+     "Entire screen" and tick "Share system audio". Good for a call in Zoom or Teams.
 3. Flip the switch on. The status next to the name reads "listening".
 4. Press **Float** to pop J-me out into a small window that stays on top of everything.
    Drag it over the video. Closing it puts J-me back on the page.
 5. Flip the switch off when done. Flipping on again starts a fresh queue.
 
-## 3. The phone or tablet as a second screen
+## 3. The phone or tablet as a second screen (developer install)
 
 The laptop listens; the phone shows the same queue live.
 
-1. On the laptop, start J-me by way 1 or way 2.
-2. On the phone, on the same Wi-Fi, open **http://<your computer's LAN address>:8787** in the browser.
-   (That is the laptop's address on the home network. If the laptop is on a different
-   network, run `ipconfig` on it and use the "IPv4 Address" of the Wi-Fi adapter.)
+1. On the laptop, start J-me by way 2 with `J-me-shared.cmd`.
+2. On the phone, on the same Wi-Fi, open **http://<laptop address>:8787** in the
+   browser (`ipconfig` on the laptop shows the "IPv4 Address" of the Wi-Fi adapter).
 3. The queue follows the laptop. Tap to pull up, star to pin, type to ask.
 
 The phone cannot listen on its own yet: browsers only allow the microphone on a secure
-connection, and the phone app is not built. The switch on the phone's page will say
-"audio failed"; ignore it and use the laptop as the ear.
+connection. Anyone on the same Wi-Fi can open that page while the engine is running.
+Fine at home; do not run it on public Wi-Fi.
 
-Anyone on the same Wi-Fi can open that page while the engine is running. Fine at home;
-do not run it on public Wi-Fi.
-
-## 4. A recorded episode (for podcasters and lecturers)
+## 4. A recorded episode (for podcasters and lecturers; developer install)
 
 Run J-me over a finished recording's captions and publish a companion page viewers open
 next to the episode. This is still command-line, developer shape:
@@ -76,21 +93,24 @@ video. Review mode on that page lets the host drop or keep items and export the 
 
 ## What is running where
 
-- **The engine** (the "J-me engine" window) does the listening: speech to text, the
-  anticipator model, the queue, the web lookups. It runs on the laptop. Ollama must be
-  running with the `qwen2.5:7b` model pulled.
-- **The switch** is whichever front end you use: the extension panel, the page, or the
-  phone. They all show the same queue.
-- Audio, transcript and the model never leave the laptop. The only thing that goes out
-  is the web search for items that earn one.
+- **The extension** runs the ear (Silero voice detection and Moonshine speech
+  recognition, on the GPU through WebGPU or on the CPU), the queue, and a brain, all in
+  the browser. Audio and transcript never leave the machine.
+- **The developer install** (`npm run setup`, `J-me.cmd`) adds the Node engine with the
+  7B brain through Ollama, the page switch, the phone screen and the recorded-episode
+  tools. When it is installed and Ollama is running, the extension uses that brain too.
+- The only things that go out are the lookups for items that earn one (Wikipedia,
+  DuckDuckGo), and the one-time model downloads.
 
 ## When something is off
 
-- **Nothing appears for a long time.** The first cards take about 15 seconds of speech.
-  Check the engine window is open and that Ollama is running.
-- **"engine not running"** in the panel: double-click `J-me.cmd`, then click the switch
-  again.
-- **"no audio in that share"**: the picker gave a window without audio. Pick the tab
-  itself, or "Entire screen" with the audio box ticked.
+- **The status line says "downloading" or "loading" for a long time.** First run. The
+  models are 100 MB to 1 GB. Leave the tab; the panel updates as it goes.
+- **"no brain".** The browser has no WebGPU and no built-in model, and Ollama is not
+  running. Use Chrome or Edge on a machine with a GPU, or do the developer install.
+- **Nothing appears for a long time.** The first cards take about 15 seconds of speech,
+  plus the brain's thinking time (a second with Ollama on a GPU, up to 40 with the
+  in-browser model). Check the status line in the panel.
+- **The badge shows "!"** after a click: hover the icon, the tooltip says why.
 - **Odd cards** (a sung rhythm taken as a title, a name misheard): the model heard it
   that way. Star what matters, let the rest fade.

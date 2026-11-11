@@ -18,8 +18,15 @@ patent.
       opened, one is starred, the icon is clicked off. No narration needed; captions
       on the recording are enough.
 - [ ] README install path works from a `git clone` by someone who has never seen it.
-- [ ] Release `v0.1.0` tagged, with a zipped `extension/` attached for people who do not
+- [x] Release `v0.1.0` tagged, with a zipped `extension/` attached for people who do not
       want to clone.
+- [ ] Release `v0.2.0`: the extension runs everything in the browser (2026-11-10). The
+      zip is the product now; the clone is the developer path. The maintainer's ruling: "lets try
+      2 with 1 and 3 as backup" (2 = everything in the extension, 1 = a hosted page,
+      3 = a one-file tray installer).
+- [ ] the maintainer tests the built-in Chrome brain and real tab capture by hand in his Chrome
+      (the test harness cannot: branded Chrome ignores unpacked extensions from the
+      command line, and tab capture needs a real click).
 
 ## 2. Where, in order
 
@@ -32,9 +39,10 @@ patent.
    round of feedback.
 5. **r/podcasting** and podcast-producer communities, with the companion page angle:
    run it over your episode, publish the page for your listeners.
-6. **Chrome Web Store** listing for the extension once the install story is one click.
-   One-time developer registration; review takes days. The listing points at GitHub for
-   the engine.
+6. **Chrome Web Store** listing for the extension. As of v0.2.0 the install story is one
+   click (nothing else to install), so this moves up as soon as the first round of
+   feedback is in. One-time developer registration; review takes days. The listing
+   points at GitHub for the developer install.
 
 Skip Product Hunt for now; it rewards launch theatre over users.
 

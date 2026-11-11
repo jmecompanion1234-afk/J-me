@@ -1,9 +1,10 @@
-import type { DecayParams, EngineEvent, Mode, QueueItem, SearchResult, TranscriptSegment } from './types.ts';
+import type { DecayParams, EngineEvent, ItemKind, Mode, QueueItem, SearchResult, TranscriptSegment } from './types.ts';
 import { DEFAULT_DECAY } from './types.ts';
 import { Transcript } from './transcript.ts';
 import { Queue } from './queue.ts';
 import { Anticipator, answerPrompt, DEFAULT_ANTICIPATOR, type AnticipatorOptions } from './anticipator.ts';
 import { webSearch } from './providers/web.ts';
+import { wikiLookup } from './providers/wiki.ts';
 import type { LocalDocs } from './providers/localdocs.ts';
 
 export interface EngineOptions {
@@ -19,7 +20,26 @@ export interface EngineOptions {
   /** answer prompt items with the local model when staged */
   answerPrompts: boolean;
   docs?: LocalDocs;
+  /** the web lookup for a staged item; default: Wikipedia card for lookups plus a DuckDuckGo search */
+  search?: SearchFn;
 }
+
+export type SearchFn = (query: string, kind: ItemKind) => Promise<SearchResult[]>;
+
+/** The Node default. A named thing gets its Wikipedia card first; everything gets the web.
+ *  Either may fail (offline, a search engine challenge): the other still answers. */
+export const defaultSearch: SearchFn = async (query, kind) => {
+  const [wiki, web] = await Promise.allSettled([
+    kind === 'lookup' ? wikiLookup(query, 2) : Promise.resolve([] as SearchResult[]),
+    webSearch(query, 5),
+  ]);
+  const out: SearchResult[] = [];
+  if (wiki.status === 'fulfilled') out.push(...wiki.value);
+  if (web.status === 'fulfilled') out.push(...web.value);
+  if (!out.length && kind !== 'lookup') out.push(...(await wikiLookup(query, 1).catch(() => [] as SearchResult[])));
+  if (!out.length && web.status === 'rejected') throw web.reason;
+  return out;
+};
 
 export const DEFAULT_ENGINE: EngineOptions = {
   mode: 'room',
@@ -105,11 +125,12 @@ export class Engine {
       this.stats.anticipatorCalls++;
       this.stats.anticipatorMs += Date.now() - t0;
       this.stats.candidates += cands.length;
+      this.status(`brain: ${cands.length} candidate${cands.length === 1 ? '' : 's'} in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
       // Anchor on the last ~20 s: that is the moment that earned the items.
       const anchor = window.filter((s) => s.t1 >= at - 20);
       this.queue.admit(cands, anchor.length ? anchor : window, at);
     } catch (e) {
-      this.emit({ type: 'error', now: at, text: `anticipator: ${(e as Error).message}` });
+      this.emit({ type: 'error', now: at, text: `anticipator: ${e instanceof Error ? e.message : String(e)}` });
     }
   }
 
@@ -133,13 +154,14 @@ export class Engine {
           }
         } else if (this.opts.fetchWeb) {
           this.stats.fetches++;
-          results.push(...(await webSearch(item.text, 5)));
-          sources.push('web');
+          const found = await (this.opts.search ?? defaultSearch)(item.text, item.kind);
+          results.push(...found);
+          for (const r of found) if (!sources.includes(r.source)) sources.push(r.source);
         }
         item.results = results;
         item.sources = sources;
       } catch (e) {
-        this.emit({ type: 'error', now: this.now, text: `stage "${item.text}": ${(e as Error).message}` });
+        this.emit({ type: 'error', now: this.now, text: `stage "${item.text}": ${e instanceof Error ? e.message : String(e)}` });
         item.results = results;
         item.sources = sources;
       }

@@ -1,25 +1,32 @@
 import type { Candidate, Mode } from './types.ts';
+import { ollamaChat, type Chat } from './brain.ts';
 
 /**
- * The anticipator asks a small local LLM (via Ollama) what someone in the room would want
- * pulled up right now. Only the transcript window and the current queue texts are sent, and
- * only to the local Ollama server.
+ * The anticipator asks a small local LLM what someone in the room would want pulled up
+ * right now. Only the transcript window and the current queue texts are sent, and only to
+ * the brain on this device: Ollama by default, or whatever `chat` is plugged in.
  */
 export interface AnticipatorOptions {
   host: string;
   model: string;
   maxItems: number;
   timeoutMs: number;
+  /** the brain; when absent, Ollama at `host` with `model` */
+  chat?: Chat;
 }
 
 export const DEFAULT_ANTICIPATOR: AnticipatorOptions = {
-  host: process.env.JME_OLLAMA ?? 'http://127.0.0.1:11434',
-  model: process.env.JME_MODEL ?? 'qwen2.5:7b',
+  host: 'http://127.0.0.1:11434',
+  model: 'qwen2.5:7b',
   maxItems: 3,
   timeoutMs: 60_000,
 };
 
-const SYSTEM = `You are the producer sitting beside a live conversation, like Jamie on a podcast.
+export function brainOf(opts: AnticipatorOptions): Chat {
+  return opts.chat ?? ollamaChat(opts.host, opts.model);
+}
+
+export const ANTICIPATOR_SYSTEM = `You are the producer sitting beside a live conversation, like Jamie on a podcast.
 You never speak. You prepare what the people talking are about to want pulled up.
 
 Given the most recent transcript, propose up to N items. Each item is one of:
@@ -54,41 +61,21 @@ export class Anticipator {
       `N: ${this.opts.maxItems}\n` +
       `Already in queue:\n${queueTexts.length ? queueTexts.map((t) => `- ${t}`).join('\n') : '(empty)'}\n\n` +
       `Most recent transcript:\n"""\n${windowText}\n"""`;
-    const body = {
-      model: this.opts.model,
-      stream: false,
-      format: 'json',
-      options: { temperature: 0.3, num_predict: 600 },
-      messages: [
-        { role: 'system', content: SYSTEM },
+    const raw = await brainOf(this.opts)(
+      [
+        { role: 'system', content: ANTICIPATOR_SYSTEM },
         { role: 'user', content: user },
       ],
-    };
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), this.opts.timeoutMs);
-    try {
-      const res = await fetch(`${this.opts.host}/api/chat`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: ctrl.signal,
-      });
-      if (!res.ok) throw new Error(`ollama ${res.status}: ${await res.text()}`);
-      const data = (await res.json()) as { message?: { content?: string } };
-      return parseCandidates(data.message?.content ?? '', this.opts.maxItems);
-    } finally {
-      clearTimeout(timer);
-    }
+      { json: true, temperature: 0.3, maxTokens: 600, timeoutMs: this.opts.timeoutMs },
+    );
+    return parseCandidates(raw, this.opts.maxItems);
   }
 }
 
 /** Answer a "prompt" item over the recent transcript, locally. Plain text, short. */
 export async function answerPrompt(opts: AnticipatorOptions, prompt: string, windowText: string): Promise<string> {
-  const body = {
-    model: opts.model,
-    stream: false,
-    options: { temperature: 0.2, num_predict: 300 },
-    messages: [
+  const raw = await brainOf(opts)(
+    [
       {
         role: 'system',
         content:
@@ -97,22 +84,9 @@ export async function answerPrompt(opts: AnticipatorOptions, prompt: string, win
       },
       { role: 'user', content: `Transcript:\n"""\n${windowText}\n"""\n\nQuestion: ${prompt}` },
     ],
-  };
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs);
-  try {
-    const res = await fetch(`${opts.host}/api/chat`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-    });
-    if (!res.ok) throw new Error(`ollama ${res.status}`);
-    const data = (await res.json()) as { message?: { content?: string } };
-    return (data.message?.content ?? '').trim();
-  } finally {
-    clearTimeout(timer);
-  }
+    { temperature: 0.2, maxTokens: 300, timeoutMs: opts.timeoutMs },
+  );
+  return raw.trim();
 }
 
 const FILLER = /^(history of|context (for|of|about)|overview of|background (on|of)|clip (of|from)|wikipedia page|compare |comparison of|summar(y|ize)|explain (how|why|the)|discussion (of|about)|the (role|impact|importance|significance) of)/i;

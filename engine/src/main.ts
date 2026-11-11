@@ -56,7 +56,7 @@ async function main(): Promise<void> {
   let localModel: string | undefined;
   try { localModel = JSON.parse(readFileSync(path.join(ROOT, 'jme.local.json'), 'utf8')).model; } catch {}
   const model = arg('model') ?? process.env.JME_MODEL ?? localModel;
-  const anticipator = model ? { model } : {};
+  const anticipator = { ...(model ? { model } : {}), ...(process.env.JME_OLLAMA ? { host: process.env.JME_OLLAMA } : {}) };
   const windowSec = Number(arg('window') ?? 60);
   const anticipateEvery = Number(arg('every') ?? 15);
   let docs: LocalDocs | undefined;
@@ -86,6 +86,7 @@ async function main(): Promise<void> {
     sessionsDir: path.join(ROOT, 'sessions'),
     mode,
     docsDir: arg('docs') ? path.resolve(arg('docs') as string) : undefined,
+    engine: { anticipator, windowSec, anticipateEvery },
     log,
   });
 }
