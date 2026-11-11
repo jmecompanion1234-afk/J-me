@@ -66,6 +66,8 @@ chrome.action.onClicked.addListener(async (tab) => {
   } catch (e) {
     tabId = null;
     console.error('J-me could not start', e);
+    // Release a half-taken tab stream, or the next click fails with "Error starting tab capture".
+    chrome.runtime.sendMessage({ target: 'offscreen', type: 'stop' }).catch(() => {});
     chrome.action.setBadgeText({ text: '!', tabId: tab.id });
     chrome.action.setTitle({ title: 'J-me could not start: ' + e.message, tabId: tab.id });
     try { await chrome.tabs.sendMessage(tab.id, { type: 'status', text: 'could not start: ' + e.message }); } catch {}

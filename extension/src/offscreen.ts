@@ -43,7 +43,14 @@ const status = (text: string) => event({ type: 'status', now: engine?.now ?? 0, 
 let brainPicking: Promise<Brain> | null = null;
 let earLoading: Promise<void> | null = null;
 
-const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+// DOMException is not an Error in every realm, so read name/message off any object that has them.
+const errText = (e: unknown): string => {
+  if (e && typeof e === 'object' && 'message' in e) {
+    const { name, message } = e as { name?: string; message?: string };
+    return name && name !== 'Error' && !String(message).startsWith(name) ? `${name}: ${message}` : String(message);
+  }
+  return String(e);
+};
 /** The first frame of a stack, so a thrown TypeError names the line it came from. */
 const where = (e: unknown): string => {
   const line = e instanceof Error && e.stack ? (e.stack.split('\n').find((l) => /\bat\b|@/.test(l)) ?? '') : '';
@@ -114,17 +121,11 @@ interface StartMessage {
 async function start(m: StartMessage): Promise<void> {
   await stop();
   started = Date.now();
-  engine = new Engine({ mode: 'media', fetchWeb: true, answerPrompts: true, search: browserSearch });
-  engine.on(event);
-  event({ type: 'hello', mode: 'media', sessionId: new Date().toISOString(), now: 0 });
-  await prepare(m.brain ?? {});
-  engine.anticipator.opts.chat = brain!.chat;
-  if (ear) ear.flush();
-
+  // Take the tab's audio FIRST: a stream id from chrome.tabCapture is single use and expires
+  // within seconds, and the first click may spend minutes downloading models. Playing the stream
+  // back right away also keeps the tab audible (capturing mutes it otherwise).
   ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
-  await ctx.audioWorklet.addModule('worklet.js');
-  const node = new AudioWorkletNode(ctx, 'pcm-forwarder');
-  node.port.onmessage = (e: MessageEvent<Float32Array>) => ear?.push(e.data);
+  void ctx.resume().catch(() => {});
   let src: AudioNode;
   if (m.streamId) {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -132,7 +133,8 @@ async function start(m: StartMessage): Promise<void> {
       video: false,
     });
     src = ctx.createMediaStreamSource(stream);
-    stream.getAudioTracks()[0].onended = () => {
+    const track = stream.getAudioTracks()[0];
+    if (track) track.onended = () => {
       status('the tab stopped sharing audio');
       void stop();
       tell({ type: 'stopped' });
@@ -145,14 +147,23 @@ async function start(m: StartMessage): Promise<void> {
       ear?.flush();
       status('file finished');
     };
-    fileSource.start();
     src = fileSource;
   } else {
     throw new Error('nothing to listen to');
   }
-  // Capturing a tab mutes it for the user unless the capturer plays it back.
   src.connect(ctx.destination);
+  engine = new Engine({ mode: 'media', fetchWeb: true, answerPrompts: true, search: browserSearch });
+  engine.on(event);
+  event({ type: 'hello', mode: 'media', sessionId: new Date().toISOString(), now: 0 });
+  await prepare(m.brain ?? {});
+  if (!engine) return; // stopped while loading
+  engine.anticipator.opts.chat = brain!.chat;
+  if (ear) ear.flush();
+  await ctx.audioWorklet.addModule('worklet.js');
+  const node = new AudioWorkletNode(ctx, 'pcm-forwarder');
+  node.port.onmessage = (e: MessageEvent<Float32Array>) => ear?.push(e.data);
   src.connect(node);
+  if (fileSource) fileSource.start();
   ticker = setInterval(() => engine?.tick(clock()), 1000);
   status(`listening · ear on ${ear!.device} · brain: ${brain!.name}`);
 }
