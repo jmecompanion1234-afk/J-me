@@ -44,6 +44,11 @@ let brainPicking: Promise<Brain> | null = null;
 let earLoading: Promise<void> | null = null;
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** The first frame of a stack, so a thrown TypeError names the line it came from. */
+const where = (e: unknown): string => {
+  const line = e instanceof Error && e.stack ? (e.stack.split('\n').find((l) => /\bat\b|@/.test(l)) ?? '') : '';
+  return line ? ` [${line.trim().slice(0, 160)}]` : '';
+};
 
 let prepareChain: Promise<void> = Promise.resolve();
 
@@ -58,9 +63,13 @@ function prepare(brainOpts: Partial<BrainOptions>): Promise<void> {
 
 async function prepareNow(brainOpts: Partial<BrainOptions>): Promise<void> {
   // No explicit order: the stored preference (chrome.storage.local.brainOrder), else the default.
+  // The service worker passes the preference with every message; an offscreen document has no
+  // chrome.storage in branded Chrome (only runtime messaging), so this read is best effort.
   if (!brainOpts.order) {
-    const stored = (await chrome.storage.local.get('brainOrder')).brainOrder as unknown;
-    if (Array.isArray(stored) && stored.length) brainOpts = { ...brainOpts, order: stored as BrainOptions['order'] };
+    try {
+      const stored = (await chrome.storage?.local?.get('brainOrder'))?.brainOrder as unknown;
+      if (Array.isArray(stored) && stored.length) brainOpts = { ...brainOpts, order: stored as BrainOptions['order'] };
+    } catch {}
   }
   const wanted = brainOpts.order;
   if (brainPicking && wanted) {
@@ -177,7 +186,7 @@ function command(msg: Command): void {
 
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   if (!msg || msg.target !== 'offscreen') return;
-  if (msg.type === 'start') start(msg as StartMessage).then(() => reply({ ok: true }), (e: unknown) => { status('could not start: ' + errText(e)); reply({ ok: false, error: errText(e) }); });
+  if (msg.type === 'start') start(msg as StartMessage).then(() => reply({ ok: true }), (e: unknown) => { console.error('J-me could not start', e); status('could not start: ' + errText(e)); reply({ ok: false, error: errText(e) + where(e) }); });
   else if (msg.type === 'stop') stop().then(() => reply({ ok: true }));
   else if (msg.type === 'prepare') prepare((msg as { brain?: Partial<BrainOptions> }).brain ?? {}).then(() => reply({ ok: true, ear: ear?.device, brain: brain?.name }), (e: unknown) => reply({ ok: false, error: errText(e) }));
   else if (msg.type === 'ws') { command(msg.msg as Command); reply({ ok: true }); }

@@ -17,6 +17,23 @@ async function brainPrefs() {
   return Array.isArray(brainOrder) && brainOrder.length ? { order: brainOrder } : {};
 }
 
+/** Message the offscreen page; it answers only once its (large) module has loaded, so retry
+ *  through "Receiving end does not exist" for up to ~20 s. */
+async function send(msg, tries = 40) {
+  let last;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await chrome.runtime.sendMessage({ target: 'offscreen', ...msg });
+      if (r !== undefined) return r;
+    } catch (e) {
+      last = e;
+      if (!/Receiving end does not exist/.test(String(e && e.message))) throw e;
+    }
+    await new Promise((f) => setTimeout(f, 500));
+  }
+  throw new Error('the J-me page did not answer' + (last ? ': ' + last.message : ''));
+}
+
 async function start(tab) {
   await ensureOffscreen();
   const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
@@ -24,7 +41,7 @@ async function start(tab) {
   await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['overlay.js'] });
   chrome.action.setBadgeText({ text: '…', tabId: tab.id });
   chrome.action.setBadgeBackgroundColor({ color: '#f2b84b', tabId: tab.id });
-  const r = await chrome.runtime.sendMessage({ target: 'offscreen', type: 'start', streamId, title: tab.title, brain: await brainPrefs() });
+  const r = await send({ type: 'start', streamId, title: tab.title, brain: await brainPrefs() });
   if (r && r.ok === false) throw new Error(r.error || 'could not start');
   chrome.action.setBadgeText({ text: 'ON', tabId: tab.id });
   chrome.action.setTitle({ title: 'J-me: listening to this tab (click to stop)', tabId: tab.id });
@@ -48,6 +65,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     await start(tab);
   } catch (e) {
     tabId = null;
+    console.error('J-me could not start', e);
     chrome.action.setBadgeText({ text: '!', tabId: tab.id });
     chrome.action.setTitle({ title: 'J-me could not start: ' + e.message, tabId: tab.id });
     try { await chrome.tabs.sendMessage(tab.id, { type: 'status', text: 'could not start: ' + e.message }); } catch {}
@@ -62,7 +80,7 @@ chrome.runtime.onInstalled.addListener(() => {
   setTimeout(async () => {
     try {
       await ensureOffscreen();
-      await chrome.runtime.sendMessage({ target: 'offscreen', type: 'prepare', brain: await brainPrefs() });
+      await send({ type: 'prepare', brain: await brainPrefs() });
     } catch {}
   }, 3000);
 });
