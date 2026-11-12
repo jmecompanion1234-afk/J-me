@@ -24,7 +24,7 @@ recordings/
 Thumbs.db
 
 # session logs and backtest maps stay on the device
-sessions/
+/sessions/
 
 # the extension ships its runtime files
 !extension/vendor/*.onnx
