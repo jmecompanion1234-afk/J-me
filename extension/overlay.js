@@ -42,7 +42,12 @@
 .empty{color:#8a8f9c;font-size:13px;padding:8px}
 .card{background:#171a21;border:1px solid #262a33;border-radius:8px;padding:8px 10px;cursor:pointer;transition:opacity .4s}
 .card:hover{background:#1e222b}.card.pinned{border-color:#f2b84b}.card.prompt{border-left:3px solid #c792ea}
-.card.math{border-left:3px solid #f27b7b}.card.math .answer{color:#f2b84b;margin-top:4px}
+.card.math{background:#3a1416;border:1px solid #f27b7b;border-left:6px solid #f2403f;order:-1}
+.card.math .flag{color:#ff6b6b;font-weight:800;font-size:13px;letter-spacing:.02em;text-transform:uppercase;margin-bottom:4px}
+.card.math .t span{color:#ffd9d9}.card.math .answer{color:#fff;font-size:15px;font-weight:700;margin-top:6px;line-height:1.35}
+.card.math .why{color:#e8a0a0}
+.bar.flash{animation:jmeflash 1.2s ease-out 3}
+@keyframes jmeflash{0%{background:#f2403f}100%{background:transparent}}
 .card .t{display:flex;gap:6px;align-items:flex-start}.card .t span{flex:1}
 .card .pin{all:unset;cursor:pointer;color:#8a8f9c;font-size:14px}.card.pinned .pin{color:#f2b84b}
 .card .why{color:#8a8f9c;font-size:12px;margin-top:2px}
@@ -184,7 +189,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
   let emptyNode = null;
   function cardHtml(it) {
     const ready = (it.results && it.results.length) || it.answer;
-    let html = `<div class="t">${ready ? '<i class="dot"></i>' : ''}<span>${it.kind === 'math' ? '⚠ ' : ''}${esc(it.text)}</span><button class="pin" title="${it.state === 'pinned' ? 'Release it back into the stream' : 'Keep it'}">${it.state === 'pinned' ? '★' : '☆'}</button></div><div class="why">${esc(it.why || '')}</div>`;
+    let html = (it.kind === 'math' ? '<div class="flag">⚠ The numbers do not add up</div>' : '') + `<div class="t">${ready ? '<i class="dot"></i>' : ''}<span>${esc(it.kind === 'math' ? it.text.replace(/^Do the numbers add up\? /, '') : it.text)}</span><button class="pin" title="${it.state === 'pinned' ? 'Release it back into the stream' : 'Keep it'}">${it.state === 'pinned' ? '★' : '☆'}</button></div><div class="why">${esc(it.why || '')}</div>`;
     if (it.kind === 'prompt') html += `<div class="hand">${aiLink(it, false)}</div>`;
     if ((it.kind === 'prompt' || it.kind === 'math') && it.answer && open !== it.id) html += `<div class="answer">${esc(it.answer)}</div>`;
     if (open === it.id) {
@@ -232,6 +237,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
   }
   function handle(ev) {
     if (ev.type === 'queue') { items = ev.items; render(); }
+    else if (ev.type === 'item' && ev.change === 'born' && ev.item.kind === 'math') { const bar = q('.bar'); bar.classList.remove('flash'); void bar.offsetWidth; bar.classList.add('flash'); }
     else if (ev.type === 'segment') { segs.push(ev.segment.text); while (segs.length > 6) segs.shift(); tr.textContent = segs.join(' '); }
     else if (ev.type === 'status') { if (!/^stt /.test(ev.text)) st.textContent = ev.text; } // the ear's timing lines are for the log
     else if (ev.type === 'hello') { st.textContent = ev.title ? 'listening to: ' + ev.title : 'listening'; segs = []; tr.textContent = ''; }

@@ -174,7 +174,12 @@ export class Engine {
         if (this.lastChecked === key) continue;
         this.lastChecked = key;
         const [item] = this.queue.admit([{ kind: 'math', text: `Do the numbers add up? ${issue.claim.slice(0, 140)}`, why: 'the calculator', confidence: 1 }], [prev, seg].filter((x): x is TranscriptSegment => !!x), this.now);
-        if (item) { item.answer = issue.calc; item.sources = ['calculator']; }
+        if (item) {
+          item.answer = issue.calc;
+          item.sources = ['calculator'];
+          this.queue.pin(item.id, this.now); // a flag stays up until the person takes it down
+          this.status('⚠ the numbers do not add up');
+        }
       }
     }
   }
