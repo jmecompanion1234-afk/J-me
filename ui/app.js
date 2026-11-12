@@ -64,9 +64,9 @@ function renderQueue() {
       `<div class="text">${esc(it.text)}</div>` +
       `<div class="meta"><span class="kind ${it.kind}" title="${it.kind}"></span>` +
       (it.state === 'ready' || it.state === 'pinned' && (it.results || it.answer) ? '<span class="ready" title="ready"></span>' : '') +
-      `<button class="pin" title="Pin">${it.state === 'pinned' ? '★' : '☆'}</button></div>` +
+      `<button class="pin" title="${it.state === 'pinned' ? 'Release it' : 'Keep it'}">${it.state === 'pinned' ? '★' : '☆'}</button></div>` +
       `<div class="why">${esc(it.why || '')}</div>`;
-    card.querySelector('.pin').onclick = (e) => { e.stopPropagation(); send({ type: 'pin', id: it.id }); };
+    card.querySelector('.pin').onclick = (e) => { e.stopPropagation(); send({ type: it.state === 'pinned' ? 'unpin' : 'pin', id: it.id }); };
     card.onclick = () => { openId = it.id; send({ type: 'pull', id: it.id }); showItem(it); };
     queueEl.appendChild(card);
   }

@@ -110,6 +110,6 @@ export type EngineEvent =
   | { type: 'hello'; mode: Mode; sessionId: string; now: number; title?: string }
   | { type: 'segment'; segment: TranscriptSegment }
   | { type: 'queue'; now: number; items: QueueItem[] }
-  | { type: 'item'; now: number; item: QueueItem; change: 'born' | 'staged' | 'ready' | 'expired' | 'pinned' | 'pulled' | 'touched' }
+  | { type: 'item'; now: number; item: QueueItem; change: 'born' | 'staged' | 'ready' | 'expired' | 'pinned' | 'unpinned' | 'pulled' | 'touched' }
   | { type: 'status'; now: number; text: string }
   | { type: 'error'; now: number; text: string };

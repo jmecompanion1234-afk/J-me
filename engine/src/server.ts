@@ -107,6 +107,7 @@ export async function serve(o: ServeOptions): Promise<void> {
         return;
       }
       if (msg.type === 'pin' && msg.id) engine.pin(msg.id);
+      else if (msg.type === 'unpin' && msg.id) engine.unpin(msg.id);
       else if (msg.type === 'pull' && msg.id) {
         const it = engine.pull(msg.id);
         if (it) ws.send(JSON.stringify({ type: 'item', now: clock(), item: it, change: 'pulled' } satisfies EngineEvent));

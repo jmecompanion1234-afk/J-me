@@ -224,6 +224,7 @@ interface Command { type: string; id?: string; text?: string }
 function command(msg: Command): void {
   if (!engine) return;
   if (msg.type === 'pin' && msg.id) engine.pin(msg.id);
+  else if (msg.type === 'unpin' && msg.id) engine.unpin(msg.id);
   else if (msg.type === 'pull' && msg.id) {
     const it = engine.pull(msg.id);
     if (it) event({ type: 'item', now: engine.now, item: it, change: 'pulled' });

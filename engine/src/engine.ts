@@ -225,6 +225,10 @@ export class Engine {
     this.queue.pin(id, this.now);
   }
 
+  unpin(id: string): void {
+    this.queue.unpin(id, this.now);
+  }
+
   pull(id: string): QueueItem | undefined {
     return this.queue.pull(id, this.now);
   }

@@ -169,7 +169,7 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
   let emptyNode = null;
   function cardHtml(it) {
     const ready = (it.results && it.results.length) || it.answer;
-    let html = `<div class="t">${ready ? '<i class="dot"></i>' : ''}<span>${esc(it.text)}</span><button class="pin">${it.state === 'pinned' ? '★' : '☆'}</button></div><div class="why">${esc(it.why || '')}</div>`;
+    let html = `<div class="t">${ready ? '<i class="dot"></i>' : ''}<span>${esc(it.text)}</span><button class="pin" title="${it.state === 'pinned' ? 'Release it back into the stream' : 'Keep it'}">${it.state === 'pinned' ? '★' : '☆'}</button></div><div class="why">${esc(it.why || '')}</div>`;
     if (it.kind === 'prompt') html += `<div class="hand">${aiLink(it, false)}</div>`;
     if (open === it.id) {
       html += '<div class="res">';
@@ -201,7 +201,7 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
       if (c.dataset.sig !== sig) {
         c.dataset.sig = sig;
         c.innerHTML = cardHtml(it);
-        c.querySelector('.pin').onclick = (e) => { e.stopPropagation(); send({ type: 'pin', id: it.id }); };
+        c.querySelector('.pin').onclick = (e) => { e.stopPropagation(); send({ type: it.state === 'pinned' ? 'unpin' : 'pin', id: it.id }); };
         c.onclick = (e) => { if (e.target.tagName === 'A') return; open = open === it.id ? null : it.id; if (open) send({ type: 'pull', id: it.id }); render(); };
       }
       if (list.children[i] !== c) list.insertBefore(c, list.children[i] || null);

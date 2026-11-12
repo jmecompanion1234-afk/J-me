@@ -148,6 +148,16 @@ export class Queue {
     this.emit({ type: 'item', now, item: it, change: 'pinned' });
   }
 
+  /** The star off again: the item goes back into the stream with a fresh moment, so it fades
+   *  from now rather than vanishing at once. */
+  unpin(id: string, now: number): void {
+    const it = this.live.get(id);
+    if (!it || it.state !== 'pinned') return;
+    it.state = it.results || it.answer ? 'ready' : 'candidate';
+    it.touched = now;
+    this.emit({ type: 'item', now, item: it, change: 'unpinned' });
+  }
+
   pull(id: string, now: number): QueueItem | undefined {
     const it = this.live.get(id);
     if (!it) return undefined;
