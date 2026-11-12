@@ -41,7 +41,9 @@ Then, every time:
      the × hides it, and it follows the player into fullscreen.
 3. Click the icon again to stop.
 
-The tab keeps playing out loud the whole time.
+The tab keeps playing out loud the whole time. J-me also reads the page's title, author
+and description when you switch it on, so the brain knows who is talking and what the
+video is about (and spells the names right). The status line shows the title.
 
 **A call in another app, or the room: the microphone.** Right-click the J-me icon and
 choose **Open the J-me panel**. The side panel has a **Microphone** switch; flip it and

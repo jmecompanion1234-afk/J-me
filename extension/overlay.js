@@ -211,7 +211,7 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
     if (ev.type === 'queue') { items = ev.items; render(); }
     else if (ev.type === 'segment') { segs.push(ev.segment.text); while (segs.length > 6) segs.shift(); tr.textContent = segs.join(' '); }
     else if (ev.type === 'status') { if (!/^stt /.test(ev.text)) st.textContent = ev.text; } // the ear's timing lines are for the log
-    else if (ev.type === 'hello') { st.textContent = 'listening'; segs = []; tr.textContent = ''; }
+    else if (ev.type === 'hello') { st.textContent = ev.title ? 'listening to: ' + ev.title : 'listening'; segs = []; tr.textContent = ''; }
     else if (ev.type === 'error') st.textContent = '⚠ ' + ev.text;
     else if (ev.type === 'off') st.textContent = 'off';
   }

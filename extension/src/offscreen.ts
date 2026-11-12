@@ -115,6 +115,9 @@ interface StartMessage {
   streamId?: string;
   /** the microphone: a call in another app, or the room */
   mic?: boolean;
+  title?: string;
+  /** what the page says it is, read in the tab by the service worker */
+  page?: { title?: string; author?: string; description?: string; url?: string };
   /** test path: a URL of a wav or mp3 to play through the ear instead of a tab */
   file?: string;
   brain?: Partial<BrainOptions>;
@@ -178,9 +181,13 @@ async function start(m: StartMessage): Promise<void> {
   }
   if (playback) src.connect(ctx.destination);
   const mode = m.mic ? 'room' : 'media';
-  engine = new Engine({ mode, fetchWeb: true, answerPrompts: true, search: browserSearch });
+  const p = m.page ?? {};
+  const title = p.title || m.title || '';
+  const context = [title ? `Title: ${title}` : '', p.author ? `By: ${p.author}` : '', p.description ? `Description: ${p.description}` : '', p.url ? `URL: ${p.url}` : '']
+    .filter(Boolean).join('\n');
+  engine = new Engine({ mode, fetchWeb: true, answerPrompts: true, search: browserSearch, ...(context ? { context } : {}) });
   engine.on(event);
-  event({ type: 'hello', mode, sessionId: new Date().toISOString(), now: 0 });
+  event({ type: 'hello', mode, sessionId: new Date().toISOString(), now: 0, ...(title ? { title } : {}) });
   await prepare(m.brain ?? {});
   if (!engine) return; // stopped while loading
   engine.anticipator.opts.chat = brain!.chat;

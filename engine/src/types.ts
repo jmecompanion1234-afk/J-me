@@ -107,7 +107,7 @@ export const DEFAULT_DECAY: Record<Mode, DecayParams> = {
 
 /** Events the engine emits to UIs and to the session log. */
 export type EngineEvent =
-  | { type: 'hello'; mode: Mode; sessionId: string; now: number }
+  | { type: 'hello'; mode: Mode; sessionId: string; now: number; title?: string }
   | { type: 'segment'; segment: TranscriptSegment }
   | { type: 'queue'; now: number; items: QueueItem[] }
   | { type: 'item'; now: number; item: QueueItem; change: 'born' | 'staged' | 'ready' | 'expired' | 'pinned' | 'pulled' | 'touched' }

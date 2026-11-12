@@ -32,6 +32,8 @@ export interface EngineOptions {
   fetchVideos: boolean;
   /** the video lookup; default: YouTube's results page */
   videos?: VideoFn;
+  /** what is playing, for the brain: the page's title, author and description */
+  context?: string;
 }
 
 export type SearchFn = (query: string, kind: ItemKind) => Promise<SearchResult[]>;
@@ -137,7 +139,7 @@ export class Engine {
     const queued = this.queue.snapshot().map((i) => i.text);
     const t0 = Date.now();
     try {
-      const cands = await this.anticipator.propose(text, queued, this.opts.mode);
+      const cands = await this.anticipator.propose(text, queued, this.opts.mode, this.opts.context);
       this.stats.anticipatorCalls++;
       this.stats.anticipatorMs += Date.now() - t0;
       this.stats.candidates += cands.length;

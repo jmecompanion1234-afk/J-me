@@ -42,12 +42,43 @@ async function startTab(tab, panelOpened) {
   // The small panel on the page is a setting, and the fallback when the side panel could not open.
   const { overlayOnPage } = await chrome.storage.local.get('overlayOnPage');
   if (overlayOnPage || !panelOpened) await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['overlay.js'] });
+  const page = await readPage(tab);
   chrome.action.setBadgeText({ text: '…', tabId: tab.id });
   chrome.action.setBadgeBackgroundColor({ color: '#f2b84b', tabId: tab.id });
-  const r = await send({ type: 'start', streamId, title: tab.title, brain: await brainPrefs() });
+  const r = await send({ type: 'start', streamId, title: tab.title, page, brain: await brainPrefs() });
   if (r && r.ok === false) throw new Error(r.error || 'could not start');
   chrome.action.setBadgeText({ text: 'ON', tabId: tab.id });
   chrome.action.setTitle({ title: 'J-me: listening to this tab (click to stop)', tabId: tab.id });
+}
+
+/** What the page says it is: title, author/channel, description, URL. Read in the tab (the click
+ *  grants it), so the brain knows who is talking and what about. Best effort: a page that cannot
+ *  be read (chrome://, the Web Store) gives just the tab title. */
+async function readPage(tab) {
+  const fallback = { title: tab.title || '', author: '', description: '', url: tab.url || '' };
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      world: 'MAIN', // the page's own globals (YouTube keeps its video data there)
+      func: () => {
+        const meta = (sel) => { const el = document.querySelector(sel); return (el && (el.getAttribute('content') || el.getAttribute('href') || el.textContent) || '').trim(); };
+        const text = (s) => s.replace(/\s+/g, ' ').trim();
+        // YouTube: the watch page keeps its data in ytInitialPlayerResponse; the DOM has the channel.
+        let author = meta('link[itemprop="name"]') || meta('meta[name="author"]') || meta('meta[property="article:author"]') || meta('ytd-channel-name a') || meta('#owner #channel-name a') || meta('[itemprop="author"] [itemprop="name"]');
+        let description = meta('meta[name="description"]') || meta('meta[property="og:description"]');
+        try {
+          const yt = window.ytInitialPlayerResponse && window.ytInitialPlayerResponse.videoDetails;
+          if (yt) { author = yt.author || author; description = yt.shortDescription || description; }
+        } catch {}
+        if (!description) description = text(document.body ? document.body.innerText.slice(0, 1500) : '');
+        return { title: text(meta('meta[property="og:title"]') || document.title), author: text(author), description: text(description).slice(0, 700), url: location.href };
+      },
+    });
+    return res && res.result ? res.result : fallback;
+  } catch (e) {
+    console.warn('J-me could not read the page', e);
+    return fallback;
+  }
 }
 
 async function startMic() {

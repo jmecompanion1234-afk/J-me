@@ -86,7 +86,8 @@ if (mic) {
   await new Promise((r) => setTimeout(r, 1500));
   console.log('panel says:', await panel.evaluate(() => document.getElementById('state').textContent));
 } else {
-  const r = await send({ type: 'start', file: url, brain: brainOrder ? { order: brainOrder } : {} });
+  const page = { title: 'Two friends on the Antikythera mechanism (demo)', author: 'J-me samples', description: 'A scripted chat about the Antikythera mechanism, the Library of Alexandria and what gets lost.', url: 'https://example.invalid/demo' };
+  const r = await send({ type: 'start', file: url, page, brain: brainOrder ? { order: brainOrder } : {} });
   console.log('start:', JSON.stringify(r));
 }
 const deadline = Date.now() + (seconds ? seconds * 1000 : 20 * 60 * 1000);

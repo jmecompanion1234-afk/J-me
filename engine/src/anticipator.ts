@@ -54,10 +54,11 @@ export class Anticipator {
     this.opts = opts;
   }
 
-  async propose(windowText: string, queueTexts: string[], mode: Mode): Promise<Candidate[]> {
+  async propose(windowText: string, queueTexts: string[], mode: Mode, context?: string): Promise<Candidate[]> {
     if (windowText.trim().length < 20) return [];
     const user =
       `Mode: ${mode === 'media' ? 'listening to media (podcast/video/lecture)' : 'conversation in the room'}\n` +
+      (context ? `What is playing (from the page; use it to know who is talking and what about, and to spell names right):\n${context}\n` : '') +
       `N: ${this.opts.maxItems}\n` +
       `Already in queue:\n${queueTexts.length ? queueTexts.map((t) => `- ${t}`).join('\n') : '(empty)'}\n\n` +
       `Most recent transcript:\n"""\n${windowText}\n"""`;
