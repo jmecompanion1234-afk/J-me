@@ -41,7 +41,10 @@ async function startTab(tab, panelOpened) {
   source = { kind: 'tab', tabId: tab.id };
   // The small panel on the page is a setting, and the fallback when the side panel could not open.
   const { overlayOnPage } = await chrome.storage.local.get('overlayOnPage');
-  if (overlayOnPage || !panelOpened) await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['overlay.js'] });
+  // Only fall back to the on-page panel when no side panel is actually showing. The open()
+  // promise is not a reliable witness (it can reject while the panel opens anyway), so ask Chrome
+  // whether a side-panel page of ours exists.
+  if (overlayOnPage || !(panelOpened || (await panelShowing()))) await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['overlay.js'] });
   const page = await readPage(tab);
   chrome.action.setBadgeText({ text: '…', tabId: tab.id });
   chrome.action.setBadgeBackgroundColor({ color: '#f2b84b', tabId: tab.id });
@@ -49,6 +52,18 @@ async function startTab(tab, panelOpened) {
   if (r && r.ok === false) throw new Error(r.error || 'could not start');
   chrome.action.setBadgeText({ text: 'ON', tabId: tab.id });
   chrome.action.setTitle({ title: 'J-me: listening to this tab (click to stop)', tabId: tab.id });
+}
+
+/** Is a J-me side panel open in some window? Gives it a moment to appear first. */
+async function panelShowing() {
+  for (let i = 0; i < 6; i++) {
+    try {
+      const ctxs = await chrome.runtime.getContexts({ contextTypes: ['SIDE_PANEL'] });
+      if (ctxs.length) return true;
+    } catch { return false; }
+    await new Promise((f) => setTimeout(f, 250));
+  }
+  return false;
 }
 
 /** What the page says it is: title, author/channel, description, URL. Read in the tab (the click
