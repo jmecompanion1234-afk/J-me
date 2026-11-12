@@ -245,6 +245,15 @@ whatever media is chosen. What that means for each shape:
   works without a browser. The engine installs once with the app and starts with it.
 - **Phone.** The app's own switch, with the mic as the ear; media comes through pairing
   to the hub (section 6).
+- **Announced as planned (the maintainer's Skool post, 2026-11-11), not built:** musical note and
+  lyric inference (hear a song or a hummed line, pull up the track and lyrics); video cue
+  (the "media" item kind made real: a referenced clip, scene or timestamp pulled up, not
+  just named); and an internal RAG for inter-organizational meetings (the Node engine's
+  `--docs DIR` BM25 search over a folder, grown into the extension and into shared,
+  per-meeting document sets). Each is a feature request thread first; nothing here is
+  promised with a date. The maintainer's framing in the post: students, lecturers, podcasters,
+  journalists, interviewers, anyone who wants to fact-check instantly and fairly, both the
+  content and themselves.
 
 The engine stays the same under all four: a text-in / events-out plug-in (section 9a; the
 segment door and its `docs/API.md` are the next build), with the audio ear as one optional

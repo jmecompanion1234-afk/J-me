@@ -129,7 +129,15 @@ of existence by the confidence floor, and a Mac test.
 
 MIT: https://github.com/jmecompanion1234-afk/J-me
 
-## 6. After the first week
+## 6. Posted
+
+- 2026-11-11: the Skool community of AI architects (first public post). Framed for
+  students, lecturers, podcasters, journalists, interviewers; brain ladder minimal to
+  frontier; built-in Chrome brain described as wired, untested; ended with a call for
+  feature requests and collaborators, and three planned features (music/lyric inference,
+  video cue, internal RAG for meetings). Watch the thread for the first reports.
+
+## 7. After the first week
 
 Watch who comes back. Hosts: the product is the companion and its publishing. Viewers:
 the extension. Students: lectures. The engine is the same under all three. Decide then.
