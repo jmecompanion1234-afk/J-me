@@ -29,6 +29,10 @@ const saveBridge = () => chrome.storage.local.set({ bridge: { on: bridgeon.check
 bridgeon.onchange = saveBridge; bridgeurl.onchange = saveBridge;
 chrome.storage.local.get('bridge').then((v) => { if (v.bridge) { bridgeon.checked = !!v.bridge.on; bridgeurl.value = v.bridge.url || ''; } });
 
+const besideBox = document.getElementById('beside');
+besideBox.onchange = () => chrome.storage.local.set({ linksBeside: besideBox.checked });
+chrome.storage.local.get('linksBeside').then((v) => { besideBox.checked = v.linksBeside !== false; });
+
 const overlay = document.getElementById('overlay');
 overlay.onchange = () => chrome.storage.local.set({ overlayOnPage: overlay.checked });
 chrome.storage.local.get(['aiService', 'brainOrder', 'overlayOnPage']).then((v) => {

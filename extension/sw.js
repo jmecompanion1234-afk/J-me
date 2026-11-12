@@ -149,6 +149,37 @@ function failed(e, tab) {
   chrome.runtime.sendMessage({ target: 'panel', ev: { type: 'status', text } }).catch(() => {});
 }
 
+// ---- the reader window: links open beside the video, not instead of it ----
+// One reusable window per kind on the right half of the screen; the first time, the window
+// the video is in moves to the left half. Chrome has no split-tab API for extensions, so this
+// is the split screen. Closing the reader is fine; the next link opens a fresh one.
+const beside = { reader: null, ai: null }; // kind -> { windowId, tabId }
+chrome.windows.onRemoved.addListener((id) => { for (const k in beside) if (beside[k] && beside[k].windowId === id) beside[k] = null; });
+
+async function openBeside(url, kind, screen, sender) {
+  const { linksBeside } = await chrome.storage.local.get('linksBeside');
+  if (linksBeside === false) { await chrome.tabs.create({ url, active: false }); return; }
+  const w = beside[kind];
+  if (w) {
+    try {
+      await chrome.tabs.update(w.tabId, { url, active: true });
+      await chrome.windows.update(w.windowId, { focused: true });
+      return;
+    } catch { beside[kind] = null; }
+  }
+  // Where the video is: the sender's window (the side panel or the page), else the focused one.
+  let home = null;
+  try { home = sender && sender.tab ? await chrome.windows.get(sender.tab.windowId) : await chrome.windows.getLastFocused(); } catch {}
+  const sw = (screen && screen.w) || (home && home.width ? home.left + home.width : 1600);
+  const sh = (screen && screen.h) || (home && home.height ? home.top + home.height : 900);
+  const half = Math.floor(sw / 2);
+  if (home && home.type === 'normal' && home.state !== 'fullscreen') {
+    try { await chrome.windows.update(home.id, { state: 'normal', left: 0, top: 0, width: half, height: sh }); } catch {}
+  }
+  const win = await chrome.windows.create({ url, type: 'popup', left: half, top: 0, width: sw - half, height: sh, focused: true });
+  beside[kind] = { windowId: win.id, tabId: win.tabs && win.tabs[0] ? win.tabs[0].id : (await chrome.tabs.query({ windowId: win.id }))[0].id };
+}
+
 chrome.action.onClicked.addListener(async (tab) => {
   if (source && source.kind === 'tab' && source.tabId === tab.id) { await stop(); return; }
   // The side panel is the big view (Chrome makes room for it; drag its edge to half the
@@ -197,9 +228,8 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   } else if (msg.type === 'state') {
     reply({ source });
   } else if (msg.type === 'open' && typeof msg.url === 'string' && /^https:\/\//.test(msg.url)) {
-    // The AI's page in its own small window, so the listened-to tab keeps focus.
-    chrome.windows.create({ url: msg.url, type: 'popup', width: 560, height: 760, focused: true }).catch(() => chrome.tabs.create({ url: msg.url, active: false }));
-    reply({ ok: true });
+    openBeside(msg.url, msg.kind === 'ai' ? 'ai' : 'reader', msg.screen, sender).then(() => reply({ ok: true }), (e) => reply({ ok: false, error: String(e && e.message) }));
+    return true;
   } else if (msg.type === 'mic') {
     (async () => {
       if (!msg.on) { await stop(); reply({ ok: true }); return; }

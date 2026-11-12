@@ -34,7 +34,10 @@ Then, every time:
    panel on the page itself, which follows the video into fullscreen.)
 2. Watch. Cards appear a few seconds to half a minute behind the talk, depending on the
    brain, and fade as it moves on.
-   - Tap a card to open its links.
+   - Tap a card to open its links. A link opens in a reader window on the right half
+     of the screen, with the video window moved to the left half, so you read without
+     stopping the video. Every later link loads into that same window. (Settings can
+     send links to a background tab instead.)
    - Star a card to keep it from fading. Star it again to release it back into the
      stream; it fades from that moment on.
    - Type in the Ask bar to jump the queue with your own question.

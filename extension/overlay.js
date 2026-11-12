@@ -94,14 +94,14 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
   }
   // The AI's page opens in a small window beside the video, so the tab being listened to keeps
   // playing and keeps focus. The service worker opens it (a page script cannot).
-  const openBeside = (url) => chrome.runtime.sendMessage({ target: 'sw', type: 'open', url }).catch(() => { window.open(url, '_blank', 'noopener'); });
+  const openBeside = (url, kind) => chrome.runtime.sendMessage({ target: 'sw', type: 'open', url, kind, screen: { w: screen.availWidth, h: screen.availHeight } }).catch(() => { window.open(url, '_blank', 'noopener'); });
   const promptFor = (it) => {
     const moment = (it.anchor && it.anchor.text ? it.anchor.text : '').replace(/\s+/g, ' ').slice(0, 240);
     const ctx = moment ? `\n\nContext, from a conversation I am listening to: "${moment}"` : '';
     return it.kind === 'prompt' ? it.text + ctx : `${it.text}\n\nWhat should I know about this?` + ctx;
   };
   const aiLink = (it, small) => (frontier ? `<a class="ai${small ? ' small' : ''} here" href="#" data-answer="${esc(it.id)}">Answer here</a> ` : '') +
-    `<a class="ai${small || frontier ? ' small' : ''}" href="${esc(SERVICES[svc][1](encodeURIComponent(promptFor(it))))}" target="_blank" rel="noopener" data-beside="1">${frontier ? 'or in ' : 'Ask '}${SERVICES[svc][0]} ↗</a>`;
+    `<a class="ai${small || frontier ? ' small' : ''}" href="${esc(SERVICES[svc][1](encodeURIComponent(promptFor(it))))}" target="_blank" rel="noopener" data-beside="ai">${frontier ? 'or in ' : 'Ask '}${SERVICES[svc][0]} ↗</a>`;
 
   // Rendering is keyed by item (and by picture): a tick updates nodes in place, so nothing
   // flickers, the list keeps its scroll position and pictures are not reloaded.
@@ -126,6 +126,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
       if (!n) {
         n = document.createElement('a');
         n.href = p.page; n.target = '_blank'; n.rel = 'noopener'; n.title = p.title;
+        n.onclick = (e) => { e.preventDefault(); openBeside(p.page, 'reader'); };
         n.innerHTML = `<img src="${esc(p.thumb)}" alt="${esc(p.title)}" referrerpolicy="no-referrer" loading="lazy">`;
         picNodes.set(p.thumb, n);
       }
@@ -146,7 +147,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
     player.insertBefore(iframe, player.firstChild);
     player.querySelector('.pb span').textContent = v.title + (v.channel ? ' · ' + v.channel : '');
-    player.querySelector('.pb a').href = v.url;
+    const out = player.querySelector('.pb a'); out.href = v.url; out.onclick = (e) => { e.preventDefault(); openBeside(v.url, 'reader'); };
     player.classList.add('on');
   }
   player.querySelector('.pb button').onclick = () => { player.classList.remove('on'); const f = player.querySelector('iframe'); if (f) f.remove(); };
@@ -170,7 +171,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
         n = document.createElement('a');
         n.href = v.url; n.target = '_blank'; n.rel = 'noopener'; n.title = v.title + (v.channel ? ' · ' + v.channel : '');
         n.innerHTML = `<img src="${esc(v.thumb)}" alt="" referrerpolicy="no-referrer" loading="lazy"><div class="t">${esc(v.title)}</div><div class="p">▶</div>${v.duration ? `<div class="d">${esc(v.duration)}</div>` : ''}`;
-        if (PANEL) n.onclick = (e) => { e.preventDefault(); play(v); };
+        n.onclick = (e) => { e.preventDefault(); if (PANEL) play(v); else openBeside(v.url, 'reader'); };
         vidNodes.set(v.id, n);
       }
       n.style.opacity = (0.5 + 0.5 * v.score).toFixed(2);
@@ -188,7 +189,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
     if (open === it.id) {
       html += '<div class="res">';
       if (it.answer) html += `<div class="answer">${esc(it.answer)}</div>`;
-      for (const r of it.results || []) html += `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title || r.url)}</a><p>${esc(r.snippet || '')}</p>`;
+      for (const r of it.results || []) html += `<a href="${esc(r.url)}" target="_blank" rel="noopener" data-beside="reader">${esc(r.title || r.url)}</a><p>${esc(r.snippet || '')}</p>`;
       if (!ready) html += `<p>${it.state === 'candidate' ? 'Not fetched yet. Pin it to fetch now.' : it.state === 'staged' ? 'Fetching…' : 'No results.'}</p>`;
       if (it.kind !== 'prompt') html += `<div class="hand">${aiLink(it, true)}</div>`;
       html += '</div>';
@@ -219,7 +220,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
         c.onclick = (e) => {
           if (e.target.tagName === 'A') {
             if (e.target.dataset.answer) { e.preventDefault(); open = it.id; send({ type: 'answer', id: it.id, frontier }); render(); }
-            else if (e.target.dataset.beside) { e.preventDefault(); openBeside(e.target.href); }
+            else if (e.target.dataset.beside) { e.preventDefault(); openBeside(e.target.href, e.target.dataset.beside); }
             return;
           }
           open = open === it.id ? null : it.id; if (open) send({ type: 'pull', id: it.id }); render();
