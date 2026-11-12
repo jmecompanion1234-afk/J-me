@@ -36,10 +36,15 @@ async function send(msg, tries = 40) {
 }
 
 async function startTab(tab) {
+  // The side panel is the big view (Chrome makes room for it; drag its edge to half the
+  // screen). Opening it needs the click itself, so it goes first. The small panel on the
+  // page is a setting.
+  const { overlayOnPage } = await chrome.storage.local.get('overlayOnPage');
+  try { await chrome.sidePanel.open({ windowId: tab.windowId }); } catch (e) { console.warn('side panel', e); }
   await ensureOffscreen();
   const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
   source = { kind: 'tab', tabId: tab.id };
-  await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['overlay.js'] });
+  if (overlayOnPage) await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['overlay.js'] });
   chrome.action.setBadgeText({ text: '…', tabId: tab.id });
   chrome.action.setBadgeBackgroundColor({ color: '#f2b84b', tabId: tab.id });
   const r = await send({ type: 'start', streamId, title: tab.title, brain: await brainPrefs() });

@@ -76,11 +76,12 @@ await pump();
 console.log('prepared:', JSON.stringify(prep));
 if (!prep || !prep.ok) { clearInterval(pumping); await ctx.close(); server.close(); process.exit(1); }
 
-let panel = null;
+// The side panel page is opened as a tab in both modes: its cards are counted at the end, and
+// a tick must not rebuild them (node identity is checked, which is what the flicker was).
+const panel = await ctx.newPage();
+await panel.goto(sw.url().replace(/sw\.js$/, 'panel.html'));
+panel.on('pageerror', (e) => console.log('panel page error:', e.message));
 if (mic) {
-  panel = await ctx.newPage();
-  await panel.goto(sw.url().replace(/sw\.js$/, 'panel.html'));
-  panel.on('pageerror', (e) => console.log('panel page error:', e.message));
   await panel.click('#mic'); // the real switch: panel -> sw.startMic -> offscreen getUserMedia
   await new Promise((r) => setTimeout(r, 1500));
   console.log('panel says:', await panel.evaluate(() => document.getElementById('state').textContent));
@@ -95,10 +96,16 @@ const d = await send({ type: 'drain' });
 await pump();
 console.log(`\nsegments: ${d.segments.length}, live items: ${d.items.length}, expired: ${d.history.length}`);
 for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(6)} ${it.text}  score ${it.score.toFixed(2)}${it.results ? `, ${it.results.length} results` : ''}${it.images && it.images.length ? `, ${it.images.length} pictures` : ''}`);
-if (panel) {
-  const seen = await panel.evaluate(() => {
+{
+  const seen = await panel.evaluate(async () => {
     const root = document.getElementById('jme-overlay').shadowRoot;
-    return { cards: root.querySelectorAll('.card').length, prompts: root.querySelectorAll('.card.prompt').length, pictures: root.querySelectorAll('.imgs img').length, status: root.querySelector('.st').textContent, state: document.getElementById('state').textContent };
+    const before = [...root.querySelectorAll('.card')];
+    const imgsBefore = [...root.querySelectorAll('.imgs img')];
+    await new Promise((r) => setTimeout(r, 2500)); // two ticks
+    const after = [...root.querySelectorAll('.card')];
+    const kept = before.filter((n) => after.includes(n)).length;
+    const imgsKept = imgsBefore.filter((n) => n.isConnected).length;
+    return { cards: after.length, prompts: root.querySelectorAll('.card.prompt').length, pictures: root.querySelectorAll('.imgs img').length, nodesKeptAcrossTicks: `${kept}/${before.length} cards, ${imgsKept}/${imgsBefore.length} pictures`, status: root.querySelector('.st').textContent, state: document.getElementById('state').textContent };
   });
   console.log('side panel shows:', JSON.stringify(seen));
 }

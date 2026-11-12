@@ -26,15 +26,17 @@ about 1 GB for the brain. Give it a few minutes on first install.
 Then, every time:
 
 1. On the tab with the video or call, click the yellow **J-me** icon in the toolbar.
-   The badge reads **ON** and a J-me panel appears in the corner of the page. The panel's
-   status line names the ear and the brain in use.
+   The badge reads **ON** and J-me opens in the browser's side panel, beside the page.
+   Drag the panel's edge to make it as wide as you like, half the screen if you want.
+   The panel's status line names the ear and the brain in use. (Settings can add a small
+   panel on the page itself, which follows the video into fullscreen.)
 2. Watch. Cards appear a few seconds to half a minute behind the talk, depending on the
    brain, and fade as it moves on.
    - Tap a card to open its links.
    - Star a card to keep it from fading.
    - Type in the Ask bar to jump the queue with your own question.
-   - Drag the panel by its title bar. The dash collapses it, the × hides it.
-   - If the player goes fullscreen, the panel comes along.
+   - The on-page panel, when enabled: drag it by its title bar, the dash collapses it,
+     the × hides it, and it follows the player into fullscreen.
 3. Click the icon again to stop.
 
 The tab keeps playing out loud the whole time.

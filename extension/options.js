@@ -2,7 +2,10 @@
 const micstate = document.getElementById('micstate');
 const brain = document.getElementById('brain');
 
-chrome.storage.local.get(['aiService', 'brainOrder']).then((v) => {
+const overlay = document.getElementById('overlay');
+overlay.onchange = () => chrome.storage.local.set({ overlayOnPage: overlay.checked });
+chrome.storage.local.get(['aiService', 'brainOrder', 'overlayOnPage']).then((v) => {
+  overlay.checked = !!v.overlayOnPage;
   const ai = v.aiService || 'chatgpt';
   const r = document.querySelector(`input[name=ai][value=${ai}]`);
   if (r) r.checked = true;

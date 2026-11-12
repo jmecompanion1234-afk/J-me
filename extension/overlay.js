@@ -76,6 +76,9 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
   };
   const aiLink = (it, small) => `<a class="ai${small ? ' small' : ''}" href="${esc(SERVICES[svc][1](encodeURIComponent(promptFor(it))))}" target="_blank" rel="noopener">Ask ${SERVICES[svc][0]} ↗</a>`;
 
+  // Rendering is keyed by item (and by picture): a tick updates nodes in place, so nothing
+  // flickers, the list keeps its scroll position and pictures are not reloaded.
+  const picNodes = new Map();
   function renderImages() {
     // Newest items first, so the strip reads as a stream of what was just said.
     const seen = new Set();
@@ -90,38 +93,65 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
       if (pics.length >= 16) break;
     }
     imgs.classList.toggle('on', pics.length > 0);
-    imgs.innerHTML = pics.map((p) => `<a href="${esc(p.page)}" target="_blank" rel="noopener" title="${esc(p.title)}" style="opacity:${(0.5 + 0.5 * p.score).toFixed(2)}"><img src="${esc(p.thumb)}" alt="${esc(p.title)}" referrerpolicy="no-referrer" loading="lazy"></a>`).join('');
+    for (const [k, n] of picNodes) if (!seen.has(k)) { n.remove(); picNodes.delete(k); }
+    pics.forEach((p, i) => {
+      let n = picNodes.get(p.thumb);
+      if (!n) {
+        n = document.createElement('a');
+        n.href = p.page; n.target = '_blank'; n.rel = 'noopener'; n.title = p.title;
+        n.innerHTML = `<img src="${esc(p.thumb)}" alt="${esc(p.title)}" referrerpolicy="no-referrer" loading="lazy">`;
+        picNodes.set(p.thumb, n);
+      }
+      n.style.opacity = (0.5 + 0.5 * p.score).toFixed(2);
+      if (imgs.children[i] !== n) imgs.insertBefore(n, imgs.children[i] || null);
+    });
   }
 
+  const cardNodes = new Map();
+  let emptyNode = null;
+  function cardHtml(it) {
+    const ready = (it.results && it.results.length) || it.answer;
+    let html = `<div class="t">${ready ? '<i class="dot"></i>' : ''}<span>${esc(it.text)}</span><button class="pin">${it.state === 'pinned' ? '★' : '☆'}</button></div><div class="why">${esc(it.why || '')}</div>`;
+    if (it.kind === 'prompt') html += `<div class="hand">${aiLink(it, false)}</div>`;
+    if (open === it.id) {
+      html += '<div class="res">';
+      if (it.answer) html += `<div class="answer">${esc(it.answer)}</div>`;
+      for (const r of it.results || []) html += `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title || r.url)}</a><p>${esc(r.snippet || '')}</p>`;
+      if (!ready) html += `<p>${it.state === 'candidate' ? 'Not fetched yet. Pin it to fetch now.' : it.state === 'staged' ? 'Fetching…' : 'No results.'}</p>`;
+      if (it.kind !== 'prompt') html += `<div class="hand">${aiLink(it, true)}</div>`;
+      html += '</div>';
+    }
+    return html;
+  }
   function render() {
     renderImages();
-    list.innerHTML = '';
-    if (!items.length) { list.innerHTML = '<div class="empty">Listening builds the queue. Nothing staged yet.</div>'; return; }
-    for (const it of items) {
-      const c = document.createElement('div');
+    const ids = new Set(items.map((it) => it.id));
+    for (const [id, n] of cardNodes) if (!ids.has(id)) { n.remove(); cardNodes.delete(id); }
+    if (!items.length) {
+      if (!emptyNode) { emptyNode = document.createElement('div'); emptyNode.className = 'empty'; emptyNode.textContent = 'Listening builds the queue. Nothing staged yet.'; }
+      if (!emptyNode.isConnected) list.appendChild(emptyNode);
+      return;
+    }
+    if (emptyNode) emptyNode.remove();
+    items.forEach((it, i) => {
+      let c = cardNodes.get(it.id);
+      if (!c) { c = document.createElement('div'); cardNodes.set(it.id, c); c.dataset.sig = ''; }
       c.className = 'card' + (it.state === 'pinned' ? ' pinned' : '') + (it.kind === 'prompt' ? ' prompt' : '');
       c.style.opacity = (0.4 + 0.6 * it.score).toFixed(2);
-      const ready = (it.results && it.results.length) || it.answer;
-      let html = `<div class="t">${ready ? '<i class="dot"></i>' : ''}<span>${esc(it.text)}</span><button class="pin">${it.state === 'pinned' ? '★' : '☆'}</button></div><div class="why">${esc(it.why || '')}</div>`;
-      if (it.kind === 'prompt') html += `<div class="hand">${aiLink(it, false)}</div>`;
-      if (open === it.id) {
-        html += '<div class="res">';
-        if (it.answer) html += `<div class="answer">${esc(it.answer)}</div>`;
-        for (const r of it.results || []) html += `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title || r.url)}</a><p>${esc(r.snippet || '')}</p>`;
-        if (!ready) html += `<p>${it.state === 'candidate' ? 'Not fetched yet. Pin it to fetch now.' : it.state === 'staged' ? 'Fetching…' : 'No results.'}</p>`;
-        if (it.kind !== 'prompt') html += `<div class="hand">${aiLink(it, true)}</div>`;
-        html += '</div>';
+      const sig = [it.state, it.text, it.why, (it.results || []).length, it.answer ? it.answer.length : 0, open === it.id, svc].join('\u0001');
+      if (c.dataset.sig !== sig) {
+        c.dataset.sig = sig;
+        c.innerHTML = cardHtml(it);
+        c.querySelector('.pin').onclick = (e) => { e.stopPropagation(); send({ type: 'pin', id: it.id }); };
+        c.onclick = (e) => { if (e.target.tagName === 'A') return; open = open === it.id ? null : it.id; if (open) send({ type: 'pull', id: it.id }); render(); };
       }
-      c.innerHTML = html;
-      c.querySelector('.pin').onclick = (e) => { e.stopPropagation(); send({ type: 'pin', id: it.id }); };
-      c.onclick = (e) => { if (e.target.tagName === 'A') return; open = open === it.id ? null : it.id; if (open) send({ type: 'pull', id: it.id }); render(); };
-      list.appendChild(c);
-    }
+      if (list.children[i] !== c) list.insertBefore(c, list.children[i] || null);
+    });
   }
   function handle(ev) {
     if (ev.type === 'queue') { items = ev.items; render(); }
     else if (ev.type === 'segment') { segs.push(ev.segment.text); while (segs.length > 6) segs.shift(); tr.textContent = segs.join(' '); }
-    else if (ev.type === 'status') st.textContent = ev.text;
+    else if (ev.type === 'status') { if (!/^stt /.test(ev.text)) st.textContent = ev.text; } // the ear's timing lines are for the log
     else if (ev.type === 'hello') { st.textContent = 'listening'; segs = []; tr.textContent = ''; }
     else if (ev.type === 'error') st.textContent = '⚠ ' + ev.text;
     else if (ev.type === 'off') st.textContent = 'off';

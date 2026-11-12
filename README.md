@@ -10,8 +10,8 @@ show: nobody asks him to prepare, but when someone says "pull that up," it is up
 - **Local.** Speech recognition and the model that anticipates what you'll want run on
   your own machine, inside the browser. Audio and transcript never leave it. The only
   thing that goes out is the lookup for items that earn one.
-- **A switch, not a workflow.** Click the icon on a tab, the queue appears on the page.
-  Click again to stop. Nothing to install but the extension. For a call in another app
+- **A switch, not a workflow.** Click the icon on a tab, the queue opens beside the page
+  in the browser's side panel, as wide as you drag it. Click again to stop. Nothing to install but the extension. For a call in another app
   or the room, the side panel has a microphone switch.
 - **Links, pictures and questions.** Each card carries its web links and the pictures
   that go with it, which run as a strip across the top of the panel as the talk moves.
