@@ -254,6 +254,14 @@ whatever media is chosen. What that means for each shape:
   promised with a date. The maintainer's framing in the post: students, lecturers, podcasters,
   journalists, interviewers, anyone who wants to fact-check instantly and fairly, both the
   content and themselves.
+- **Video cue, built 2026-11-11 (v0.4.0), the maintainer: "lets start there".** A second strip
+  under the pictures: videos fetched with each card's results (`VideoResult`, YouTube's
+  results page parsed for its `videoRenderer` entries, keyless; the extension holds the
+  youtube.com host permission for it). In the side panel a click plays the video in an
+  embedded player at the top; on a page it opens YouTube. The "media" item kind is now
+  real: the anticipator is told to name a specific video, clip, scene, talk or
+  performance, and the gate dropped from 0.8 to 0.6. Not built: finding the exact scene
+  inside a video (no open API does that).
 
 The engine stays the same under all four: a text-in / events-out plug-in (section 9a; the
 segment door and its `docs/API.md` are the next build), with the audio ear as one optional

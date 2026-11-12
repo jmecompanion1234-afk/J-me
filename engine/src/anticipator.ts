@@ -33,7 +33,7 @@ Given the most recent transcript, propose up to N items. Each item is one of:
 - "search": a short web search query (3 to 8 words) for a fact, number, date, article or definition being discussed or disputed.
 - "lookup": a specific named thing (person, company, paper, book, product, place, law) worth having a card for.
 - "prompt": a question for an AI assistant, phrased as the question: a claim just made that is worth checking ("Is it true that ..."), two claims that conflict, a term used in a way that needs explaining here, or a "what if" someone posed.
-- "media": a specific clip, image, chart, scene or timestamp someone referenced.
+- "media": a specific video, clip, scene, chart, talk, interview, performance or image someone referenced or would want to see ("that interview where...", "the clip of...", "the scene in..."). Name the thing so a video search finds it.
 
 Rules:
 - Only propose what the conversation itself makes relevant RIGHT NOW. Skip small talk.
@@ -99,7 +99,7 @@ const FILLER = /^(history of|context (for|of|about)|overview of|background (on|o
 export function isFiller(kind: Candidate['kind'], text: string, confidence: number): boolean {
   if (FILLER.test(text.trim())) return true;
   if (kind === 'prompt' && (confidence < 0.6 || !QUESTION.test(text))) return true;
-  if (kind === 'media' && confidence < 0.8) return true;
+  if (kind === 'media' && confidence < 0.6) return true;
   return false;
 }
 

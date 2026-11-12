@@ -6,9 +6,11 @@ on. Anything still in the queue is one tap away, with the links already fetched.
 
 There are three ways to switch it on. The first needs nothing installed but the extension.
 
-Every card carries three things: the web links, an **Ask ChatGPT** (or Claude, or
-Perplexity) button that opens the question in your own AI with the moment baked in, and
-the pictures that feed the strip across the top of the panel. Purple-edged cards are
+Every card carries the web links, an **Ask ChatGPT** (or Claude, or Perplexity) button
+that opens the question in your own AI with the moment baked in, the pictures that feed
+the picture strip across the top of the panel, and the videos that feed the video strip
+under it. In the side panel, a video plays right there when you click it; on a page it
+opens YouTube. Purple-edged cards are
 questions the talk raised, for your AI rather than a search.
 
 ## 1. The browser switch (the one to use)
@@ -131,6 +133,9 @@ video. Review mode on that page lets the host drop or keep items and export the 
 - **The badge shows "!"** after a click: hover the icon, the tooltip says why.
 - **"microphone not allowed".** Open the settings page (⚙ in the panel) and press
   *Allow the microphone*. Chrome remembers it.
+- **No videos for a card.** YouTube's results page did not load, or the phrase found
+  nothing. The extension reads youtube.com directly, which is why it asks for that
+  permission at install.
 - **No pictures for a card.** Wikimedia had nothing for that phrase. Named things and
   places get pictures; abstract questions mostly do not.
 - **Odd cards** (a sung rhythm taken as a title, a name misheard): the model heard it

@@ -62,7 +62,7 @@ const pump = async () => {
   for (const ev of evs) {
     if (ev.type === 'status') console.log(`${since()}  · ${ev.text}`);
     else if (ev.type === 'segment') console.log(`${since()}  [${ev.segment.t0.toFixed(0)}-${ev.segment.t1.toFixed(0)}s] ${ev.segment.text}`);
-    else if (ev.type === 'item' && ev.change !== 'touched') console.log(`${since()}  ${ev.change.padEnd(7)} ${ev.item.kind.padEnd(6)} ${ev.item.text}  (${ev.item.score.toFixed(2)}${ev.item.results ? `, ${ev.item.results.length} results` : ''}${ev.item.images && ev.item.images.length ? `, ${ev.item.images.length} pictures` : ''})`);
+    else if (ev.type === 'item' && ev.change !== 'touched') console.log(`${since()}  ${ev.change.padEnd(7)} ${ev.item.kind.padEnd(6)} ${ev.item.text}  (${ev.item.score.toFixed(2)}${ev.item.results ? `, ${ev.item.results.length} results` : ''}${ev.item.images && ev.item.images.length ? `, ${ev.item.images.length} pictures` : ''}${ev.item.videos && ev.item.videos.length ? `, ${ev.item.videos.length} videos` : ''})`);
     else if (ev.type === 'error') console.log(`${since()}  ! ${ev.text}`);
     else if (ev.type === 'hello') console.log(`${since()}  hello`);
     if (ev.type === 'status' && ev.text === 'file finished') done = true;
@@ -95,7 +95,7 @@ clearInterval(pumping);
 const d = await send({ type: 'drain' });
 await pump();
 console.log(`\nsegments: ${d.segments.length}, live items: ${d.items.length}, expired: ${d.history.length}`);
-for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(6)} ${it.text}  score ${it.score.toFixed(2)}${it.results ? `, ${it.results.length} results` : ''}${it.images && it.images.length ? `, ${it.images.length} pictures` : ''}`);
+for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(6)} ${it.text}  score ${it.score.toFixed(2)}${it.results ? `, ${it.results.length} results` : ''}${it.images && it.images.length ? `, ${it.images.length} pictures` : ''}${it.videos && it.videos.length ? `, ${it.videos.length} videos` : ''}`);
 {
   const seen = await panel.evaluate(async () => {
     const root = document.getElementById('jme-overlay').shadowRoot;
@@ -105,7 +105,7 @@ for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(
     const after = [...root.querySelectorAll('.card')];
     const kept = before.filter((n) => after.includes(n)).length;
     const imgsKept = imgsBefore.filter((n) => n.isConnected).length;
-    return { cards: after.length, prompts: root.querySelectorAll('.card.prompt').length, pictures: root.querySelectorAll('.imgs img').length, nodesKeptAcrossTicks: `${kept}/${before.length} cards, ${imgsKept}/${imgsBefore.length} pictures`, status: root.querySelector('.st').textContent, state: document.getElementById('state').textContent };
+    return { cards: after.length, prompts: root.querySelectorAll('.card.prompt').length, pictures: root.querySelectorAll('.imgs img').length, videos: root.querySelectorAll('.vids a').length, nodesKeptAcrossTicks: `${kept}/${before.length} cards, ${imgsKept}/${imgsBefore.length} pictures`, status: root.querySelector('.st').textContent, state: document.getElementById('state').textContent };
   });
   console.log('side panel shows:', JSON.stringify(seen));
 }

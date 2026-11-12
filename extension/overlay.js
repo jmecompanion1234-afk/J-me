@@ -24,6 +24,18 @@
 .imgs.on{display:flex}
 .imgs a{flex:0 0 auto;height:84px;border-radius:6px;overflow:hidden;background:#171a21;opacity:.95;transition:opacity .4s}
 .imgs a:hover{opacity:1;outline:1px solid #f2b84b}.imgs img{height:84px;width:auto;max-width:150px;display:block;object-fit:cover}
+.vids{display:none;gap:4px;overflow-x:auto;padding:6px 8px;border-bottom:1px solid #262a33;scrollbar-width:thin}
+.vids.on{display:flex}
+.vids a{flex:0 0 auto;position:relative;width:150px;height:84px;border-radius:6px;overflow:hidden;background:#171a21}
+.vids a:hover{outline:1px solid #f2b84b}.vids img{width:150px;height:84px;display:block;object-fit:cover}
+.vids .d{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.75);color:#fff;font-size:11px;padding:1px 4px;border-radius:3px}
+.vids .p{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center}
+.vids .t{position:absolute;left:0;right:0;top:0;padding:3px 5px;background:linear-gradient(rgba(0,0,0,.8),transparent);color:#fff;font-size:11px;line-height:1.2;max-height:2.4em;overflow:hidden}
+.player{display:none;border-bottom:1px solid #262a33;background:#000}
+.player.on{display:block}.player iframe{width:100%;aspect-ratio:16/9;border:0;display:block}
+.player .pb{display:flex;gap:8px;align-items:center;padding:4px 8px;background:#0f1115;font-size:12px}
+.player .pb span{flex:1;color:#8a8f9c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .pb a{color:#6ea8fe;text-decoration:none}.player .pb button{all:unset;cursor:pointer;color:#8a8f9c;padding:0 4px;font-size:14px}
 .list{overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px;flex:1}
 .empty{color:#8a8f9c;font-size:13px;padding:8px}
 .card{background:#171a21;border:1px solid #262a33;border-radius:8px;padding:8px 10px;cursor:pointer;transition:opacity .4s}
@@ -45,14 +57,16 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
 </style>
 <div class="box">
   <div class="bar"><b>J-me</b><span class="st">starting…</span>${PANEL ? '' : '<button class="min" title="Collapse">–</button><button class="x" title="Hide">×</button>'}</div>
+  <div class="player"><div class="pb"><span></span><a target="_blank" rel="noopener">open on YouTube ↗</a><button title="Close">×</button></div></div>
   <div class="imgs"></div>
+  <div class="vids"></div>
   <div class="list"><div class="empty">Listening builds the queue. Nothing staged yet.</div></div>
   <div class="tr"></div>
   <form class="ask"><input placeholder="Ask something… it jumps the queue"><button>Ask</button></form>
 </div>`;
   (PANEL ? document.getElementById('jme-root') || document.body : document.documentElement).appendChild(host);
   const q = (s) => root.querySelector(s);
-  const list = q('.list'), st = q('.st'), tr = q('.tr'), imgs = q('.imgs'), askForm = q('.ask'), askInput = q('.ask input');
+  const list = q('.list'), st = q('.st'), tr = q('.tr'), imgs = q('.imgs'), vids = q('.vids'), player = q('.player'), askForm = q('.ask'), askInput = q('.ask input');
   let items = [], open = null, segs = [], collapsed = false;
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const send = (msg) => chrome.runtime.sendMessage({ target: 'offscreen', type: 'ws', msg }).catch(() => {});
@@ -107,6 +121,50 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
     });
   }
 
+  // The video strip. In the side panel a click plays the video right there (an embedded
+  // player); on a page it opens YouTube in a new tab, since pages often forbid frames.
+  const vidNodes = new Map();
+  function play(v) {
+    const f = player.querySelector('iframe');
+    if (f) f.remove();
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?autoplay=1&rel=0`;
+    iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    player.insertBefore(iframe, player.firstChild);
+    player.querySelector('.pb span').textContent = v.title + (v.channel ? ' · ' + v.channel : '');
+    player.querySelector('.pb a').href = v.url;
+    player.classList.add('on');
+  }
+  player.querySelector('.pb button').onclick = () => { player.classList.remove('on'); const f = player.querySelector('iframe'); if (f) f.remove(); };
+  function renderVideos() {
+    const seen = new Set();
+    const vs = [];
+    for (const it of [...items].sort((a, b) => b.born - a.born)) {
+      for (const v of it.videos || []) {
+        if (seen.has(v.id)) continue;
+        seen.add(v.id);
+        vs.push({ ...v, score: it.score });
+        if (vs.length >= 12) break;
+      }
+      if (vs.length >= 12) break;
+    }
+    vids.classList.toggle('on', vs.length > 0);
+    for (const [k, n] of vidNodes) if (!seen.has(k)) { n.remove(); vidNodes.delete(k); }
+    vs.forEach((v, i) => {
+      let n = vidNodes.get(v.id);
+      if (!n) {
+        n = document.createElement('a');
+        n.href = v.url; n.target = '_blank'; n.rel = 'noopener'; n.title = v.title + (v.channel ? ' · ' + v.channel : '');
+        n.innerHTML = `<img src="${esc(v.thumb)}" alt="" referrerpolicy="no-referrer" loading="lazy"><div class="t">${esc(v.title)}</div><div class="p">▶</div>${v.duration ? `<div class="d">${esc(v.duration)}</div>` : ''}`;
+        if (PANEL) n.onclick = (e) => { e.preventDefault(); play(v); };
+        vidNodes.set(v.id, n);
+      }
+      n.style.opacity = (0.5 + 0.5 * v.score).toFixed(2);
+      if (vids.children[i] !== n) vids.insertBefore(n, vids.children[i] || null);
+    });
+  }
+
   const cardNodes = new Map();
   let emptyNode = null;
   function cardHtml(it) {
@@ -125,6 +183,7 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
   }
   function render() {
     renderImages();
+    renderVideos();
     const ids = new Set(items.map((it) => it.id));
     for (const [id, n] of cardNodes) if (!ids.has(id)) { n.remove(); cardNodes.delete(id); }
     if (!items.length) {
@@ -167,7 +226,7 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
   askForm.onsubmit = (e) => { e.preventDefault(); const t = askInput.value.trim(); if (t) { send({ type: 'ask', text: t }); askInput.value = ''; } };
   if (!PANEL) {
     q('.x').onclick = () => { host.style.display = 'none'; };
-    q('.min').onclick = () => { collapsed = !collapsed; list.style.display = tr.style.display = askForm.style.display = collapsed ? 'none' : ''; imgs.style.display = collapsed ? 'none' : ''; };
+    q('.min').onclick = () => { collapsed = !collapsed; list.style.display = tr.style.display = askForm.style.display = collapsed ? 'none' : ''; imgs.style.display = vids.style.display = collapsed ? 'none' : ''; };
     // Drag by the bar.
     const bar = q('.bar');
     let drag = null;

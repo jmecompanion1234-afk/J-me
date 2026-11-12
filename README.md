@@ -13,8 +13,9 @@ show: nobody asks him to prepare, but when someone says "pull that up," it is up
 - **A switch, not a workflow.** Click the icon on a tab, the queue opens beside the page
   in the browser's side panel, as wide as you drag it. Click again to stop. Nothing to install but the extension. For a call in another app
   or the room, the side panel has a microphone switch.
-- **Links, pictures and questions.** Each card carries its web links and the pictures
-  that go with it, which run as a strip across the top of the panel as the talk moves.
+- **Links, pictures, videos and questions.** Each card carries its web links, the
+  pictures that go with it, and the videos, which run as two strips across the top of
+  the panel as the talk moves. A video plays inside the panel when clicked.
   Questions the talk raises become cards with one button that opens them in your own
   AI (ChatGPT, Claude or Perplexity), with the moment baked in.
 - **Any brain you like.** The extension finds the best one it can: Ollama if you run it,
@@ -98,7 +99,8 @@ audio -> VAD -> on-device speech to text -> rolling transcript
 In the extension, every stage runs in the browser: Silero VAD and Moonshine through
 onnxruntime-web and transformers.js (WebGPU, or wasm on the CPU), the same engine core as
 the Node version, and a brain from the list above. Lookups use Wikipedia and DuckDuckGo's
-Instant Answer API; pictures come from Wikimedia Commons. The Node engine adds Ollama, DuckDuckGo web search, and `--docs DIR`
+Instant Answer API; pictures come from Wikimedia Commons; videos from YouTube's own
+results page, read the way a browser reads it. The Node engine adds Ollama, DuckDuckGo web search, and `--docs DIR`
 to search a folder of your own notes for every item. Design notes in
 [docs/SPEC.md](docs/SPEC.md).
 

@@ -1,4 +1,4 @@
-import type { DecayParams, EngineEvent, ImageResult, ItemKind, Mode, QueueItem, SearchResult, TranscriptSegment } from './types.ts';
+import type { DecayParams, EngineEvent, ImageResult, ItemKind, Mode, QueueItem, SearchResult, TranscriptSegment, VideoResult } from './types.ts';
 import { DEFAULT_DECAY } from './types.ts';
 import { Transcript } from './transcript.ts';
 import { Queue } from './queue.ts';
@@ -6,6 +6,7 @@ import { Anticipator, answerPrompt, DEFAULT_ANTICIPATOR, type AnticipatorOptions
 import { webSearch } from './providers/web.ts';
 import { wikiLookup } from './providers/wiki.ts';
 import { commonsImages } from './providers/images.ts';
+import { youtubeSearch } from './providers/video.ts';
 import type { LocalDocs } from './providers/localdocs.ts';
 
 export interface EngineOptions {
@@ -27,11 +28,17 @@ export interface EngineOptions {
   fetchImages: boolean;
   /** the image lookup; default: Wikimedia Commons */
   images?: ImageFn;
+  /** videos for the video strip, fetched with the results (off in a dry backtest) */
+  fetchVideos: boolean;
+  /** the video lookup; default: YouTube's results page */
+  videos?: VideoFn;
 }
 
 export type SearchFn = (query: string, kind: ItemKind) => Promise<SearchResult[]>;
 export type ImageFn = (query: string, kind: ItemKind) => Promise<ImageResult[]>;
 export const defaultImages: ImageFn = (query) => commonsImages(query, 4);
+export type VideoFn = (query: string, kind: ItemKind) => Promise<VideoResult[]>;
+export const defaultVideos: VideoFn = (query, kind) => youtubeSearch(query, kind === 'media' ? 6 : 3);
 
 /** The Node default. A named thing gets its Wikipedia card first; everything gets the web.
  *  Either may fail (offline, a search engine challenge): the other still answers. */
@@ -55,6 +62,7 @@ export const DEFAULT_ENGINE: EngineOptions = {
   fetchWeb: true,
   answerPrompts: true,
   fetchImages: true,
+  fetchVideos: true,
 };
 
 /**
@@ -176,14 +184,20 @@ export class Engine {
         if (this.opts.fetchImages && this.opts.fetchWeb && item.kind !== 'prompt') {
           jobs.push((this.opts.images ?? defaultImages)(item.text, item.kind).then((found) => { images.push(...found); }, () => {}));
         }
+        const videos: VideoResult[] = [];
+        if (this.opts.fetchVideos && this.opts.fetchWeb && item.kind !== 'prompt') {
+          jobs.push((this.opts.videos ?? defaultVideos)(item.text, item.kind).then((found) => { videos.push(...found); }, () => {}));
+        }
         const settled = await Promise.allSettled(jobs);
         // The Wikipedia card's own picture leads the strip when there is one.
         for (const r of results) if (r.image && !images.some((i) => i.url === r.image!.url)) images.unshift({ title: r.title, thumb: r.image.thumb, url: r.image.url, page: r.url, source: r.source });
         item.results = results;
         item.images = images;
+        item.videos = videos;
+        if (videos.length && !sources.includes('youtube')) sources.push('youtube');
         item.sources = sources;
         const failed = settled.find((x): x is PromiseRejectedResult => x.status === 'rejected');
-        if (failed && !results.length && !item.answer) throw failed.reason;
+        if (failed && !results.length && !item.answer && !videos.length) throw failed.reason;
       } catch (e) {
         this.emit({ type: 'error', now: this.now, text: `stage "${item.text}": ${e instanceof Error ? e.message : String(e)}` });
         item.results = results;

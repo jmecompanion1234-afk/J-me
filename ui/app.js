@@ -1,7 +1,7 @@
 // J-me Phase A front end: plain ES module, no build step.
 const $ = (id) => document.getElementById(id);
 const queueEl = $('queue'), panel = $('panel'), panelBody = $('panel-body'), statusEl = $('status'), trEl = $('transcript');
-const sourceEl = $('source'), listenEl = $('listen'), floatBtn = $('float'), homeEl = $('home'), askText = $('ask-text'), imagesEl = $('images');
+const sourceEl = $('source'), listenEl = $('listen'), floatBtn = $('float'), homeEl = $('home'), askText = $('ask-text'), imagesEl = $('images'), videosEl = $('videos');
 
 // The AI a card hands off to (the same choice the companion page remembers).
 const SERVICES = { chatgpt: ['ChatGPT', (p) => 'https://chatgpt.com/?q=' + p], claude: ['Claude', (p) => 'https://claude.ai/new?q=' + p], perplexity: ['Perplexity', (p) => 'https://www.perplexity.ai/search?q=' + p] };
@@ -44,8 +44,16 @@ function handle(ev) {
 
 function setStatus(t) { statusEl.textContent = t; }
 
+function renderVideos() {
+  const seen = new Set(); const vs = [];
+  for (const it of [...items].sort((a, b) => b.born - a.born)) for (const v of it.videos || []) { if (seen.has(v.id) || vs.length >= 12) continue; seen.add(v.id); vs.push(v); }
+  videosEl.classList.toggle('on', vs.length > 0);
+  videosEl.innerHTML = vs.map((v) => `<a href="${esc(v.url)}" target="_blank" rel="noopener" title="${esc(v.title)}"><img src="${esc(v.thumb)}" alt="" referrerpolicy="no-referrer" loading="lazy"><div class="t">${esc(v.title)}</div>${v.duration ? `<div class="d">${esc(v.duration)}</div>` : ''}</a>`).join('');
+}
+
 function renderQueue() {
   renderImages();
+  renderVideos();
   queueEl.innerHTML = '';
   if (!items.length) { queueEl.innerHTML = '<div class="empty">Listening builds the queue. Nothing staged yet.</div>'; return; }
   for (const it of items) {

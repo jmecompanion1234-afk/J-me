@@ -27,6 +27,17 @@ export interface SearchResult {
   image?: { thumb: string; url: string };
 }
 
+/** A video for the video strip: a YouTube id, its thumbnail and page. */
+export interface VideoResult {
+  id: string;
+  title: string;
+  url: string;
+  thumb: string;
+  channel: string;
+  duration: string;
+  source: string;
+}
+
 /** A picture for the image strip: a thumbnail, the full file, and the page that credits it. */
 export interface ImageResult {
   title: string;
@@ -58,6 +69,8 @@ export interface QueueItem {
   results?: SearchResult[];
   /** pictures for the strip, fetched with the results */
   images?: ImageResult[];
+  /** videos for the strip, fetched with the results */
+  videos?: VideoResult[];
   /** prompt answers and summaries land here */
   answer?: string;
   /** which providers answered */
