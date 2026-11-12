@@ -9,6 +9,7 @@
   section { border: 1px solid #262a33; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; background: #171a21; }
   h2 { font-size: 15px; margin: 0 0 6px; } p { margin: 4px 0 10px; color: #8a8f9c; font-size: 13px; }
   label { display: block; margin: 4px 0; cursor: pointer; } input[type=radio] { margin-right: 8px; }
+  input[type=text], input[type=password] { font: inherit; background: #0f1115; color: #e8e8ec; border: 1px solid #262a33; border-radius: 6px; padding: 6px 8px; width: 100%; max-width: 360px; margin-top: 2px; }
   select { font: inherit; background: #0f1115; color: #e8e8ec; border: 1px solid #262a33; border-radius: 6px; padding: 6px 8px; }
   button { font: inherit; background: #f2b84b; color: #111; border: 0; border-radius: 6px; padding: 7px 12px; font-weight: 600; cursor: pointer; }
   #micstate { margin-left: 10px; color: #8a8f9c; font-size: 13px; }
@@ -25,6 +26,23 @@
     <label><input type="radio" name="ai" value="chatgpt"> ChatGPT</label>
     <label><input type="radio" name="ai" value="claude"> Claude</label>
     <label><input type="radio" name="ai" value="perplexity"> Perplexity</label>
+  </section>
+
+  <section>
+    <h2>Answer inside J-me (optional)</h2>
+    <p>With your own API key, every card gets an <b>Answer here</b> button and the answer appears in the card, while the video keeps playing. The key stays on this machine; only the question and the moment that raised it go to the provider, and only when you press the button. "Custom" is any OpenAI-compatible server, such as Ollama or LM Studio on this machine (no key needed).</p>
+    <label>Provider
+      <select id="fprov">
+        <option value="">Off</option>
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic</option>
+        <option value="custom">Custom (OpenAI-compatible)</option>
+      </select>
+    </label>
+    <label>API key <input type="password" id="fkey" placeholder="sk-…" autocomplete="off"></label>
+    <label>Model <input type="text" id="fmodel" placeholder="default for the provider"></label>
+    <label id="furlrow">Base URL <input type="text" id="furl" placeholder="http://127.0.0.1:11434/v1"></label>
+    <p id="fnote"></p>
   </section>
 
   <section>

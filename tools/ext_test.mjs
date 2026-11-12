@@ -93,6 +93,15 @@ if (mic) {
 const deadline = Date.now() + (seconds ? seconds * 1000 : 20 * 60 * 1000);
 while (!done && Date.now() < deadline) await new Promise((r) => setTimeout(r, 1000));
 clearInterval(pumping);
+// "Answer here" through a custom OpenAI-compatible endpoint (Ollama's), on the first prompt card.
+{
+  const snap = await send({ type: 'drain' });
+  const target = (snap.items || []).find((i) => i.kind === 'prompt') || (snap.items || [])[0];
+  if (target) {
+    await send({ type: 'ws', msg: { type: 'answer', id: target.id, frontier: { provider: 'custom', key: '', model: 'qwen2.5:7b', baseUrl: 'http://127.0.0.1:11434/v1' } } });
+    for (let i = 0; i < 60; i++) { await new Promise((r) => setTimeout(r, 1000)); const s2 = await send({ type: 'drain' }); const it = (s2.items || []).find((i) => i.id === target.id); if (it && it.answer && it.answer !== '…') { console.log(`\nanswer here (${target.kind}: ${target.text}):\n  ${it.answer.replace(/\n/g, ' ').slice(0, 300)}`); break; } }
+  }
+}
 const d = await send({ type: 'drain' });
 await pump();
 console.log(`\nsegments: ${d.segments.length}, live items: ${d.items.length}, expired: ${d.history.length}`);

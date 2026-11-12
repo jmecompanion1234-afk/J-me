@@ -50,6 +50,7 @@
 .hand{margin-top:6px}
 a.ai{display:inline-block;background:#c792ea;color:#111;border-radius:6px;padding:4px 10px;font-weight:600;font-size:12px;text-decoration:none}
 a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:brightness(1.1)}
+a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
 .tr{padding:6px 10px;border-top:1px solid #262a33;color:#8a8f9c;font-size:12px;max-height:3.6em;overflow:hidden}
 .ask{display:flex;gap:6px;padding:8px;border-top:1px solid #262a33}
 .ask input{flex:1;background:#171a21;color:#e8e8ec;border:1px solid #262a33;border-radius:6px;padding:6px 8px;font:inherit;font-size:13px}
@@ -78,17 +79,27 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
     perplexity: ['Perplexity', (p) => 'https://www.perplexity.ai/search?q=' + p],
   };
   let svc = 'chatgpt';
+  // "Answer here": a frontier model with the user's own key, answering inside the card.
+  let frontier = null;
   const hasStorage = typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
+  const readSettings = (v) => {
+    if (v.aiService && SERVICES[v.aiService]) svc = v.aiService;
+    if ('frontier' in v) frontier = v.frontier && (v.frontier.key || v.frontier.provider === 'custom') ? v.frontier : null;
+  };
   if (hasStorage) {
-    chrome.storage.local.get('aiService').then((v) => { if (v && SERVICES[v.aiService]) { svc = v.aiService; render(); } }).catch(() => {});
-    chrome.storage.onChanged.addListener((ch) => { if (ch.aiService && SERVICES[ch.aiService.newValue]) { svc = ch.aiService.newValue; render(); } });
+    chrome.storage.local.get(['aiService', 'frontier']).then((v) => { readSettings(v || {}); render(); }).catch(() => {});
+    chrome.storage.onChanged.addListener((ch) => { const v = {}; for (const k in ch) v[k] = ch[k].newValue; readSettings(v); render(); });
   }
+  // The AI's page opens in a small window beside the video, so the tab being listened to keeps
+  // playing and keeps focus. The service worker opens it (a page script cannot).
+  const openBeside = (url) => chrome.runtime.sendMessage({ target: 'sw', type: 'open', url }).catch(() => { window.open(url, '_blank', 'noopener'); });
   const promptFor = (it) => {
     const moment = (it.anchor && it.anchor.text ? it.anchor.text : '').replace(/\s+/g, ' ').slice(0, 240);
     const ctx = moment ? `\n\nContext, from a conversation I am listening to: "${moment}"` : '';
     return it.kind === 'prompt' ? it.text + ctx : `${it.text}\n\nWhat should I know about this?` + ctx;
   };
-  const aiLink = (it, small) => `<a class="ai${small ? ' small' : ''}" href="${esc(SERVICES[svc][1](encodeURIComponent(promptFor(it))))}" target="_blank" rel="noopener">Ask ${SERVICES[svc][0]} ↗</a>`;
+  const aiLink = (it, small) => (frontier ? `<a class="ai${small ? ' small' : ''} here" href="#" data-answer="${esc(it.id)}">Answer here</a> ` : '') +
+    `<a class="ai${small || frontier ? ' small' : ''}" href="${esc(SERVICES[svc][1](encodeURIComponent(promptFor(it))))}" target="_blank" rel="noopener" data-beside="1">${frontier ? 'or in ' : 'Ask '}${SERVICES[svc][0]} ↗</a>`;
 
   // Rendering is keyed by item (and by picture): a tick updates nodes in place, so nothing
   // flickers, the list keeps its scroll position and pictures are not reloaded.
@@ -171,6 +182,7 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
     const ready = (it.results && it.results.length) || it.answer;
     let html = `<div class="t">${ready ? '<i class="dot"></i>' : ''}<span>${esc(it.text)}</span><button class="pin" title="${it.state === 'pinned' ? 'Release it back into the stream' : 'Keep it'}">${it.state === 'pinned' ? '★' : '☆'}</button></div><div class="why">${esc(it.why || '')}</div>`;
     if (it.kind === 'prompt') html += `<div class="hand">${aiLink(it, false)}</div>`;
+    if (it.kind === 'prompt' && it.answer && open !== it.id) html += `<div class="answer">${esc(it.answer)}</div>`;
     if (open === it.id) {
       html += '<div class="res">';
       if (it.answer) html += `<div class="answer">${esc(it.answer)}</div>`;
@@ -197,12 +209,19 @@ a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:
       if (!c) { c = document.createElement('div'); cardNodes.set(it.id, c); c.dataset.sig = ''; }
       c.className = 'card' + (it.state === 'pinned' ? ' pinned' : '') + (it.kind === 'prompt' ? ' prompt' : '');
       c.style.opacity = (0.4 + 0.6 * it.score).toFixed(2);
-      const sig = [it.state, it.text, it.why, (it.results || []).length, it.answer ? it.answer.length : 0, open === it.id, svc].join('\u0001');
+      const sig = [it.state, it.text, it.why, (it.results || []).length, it.answer ? it.answer.length : 0, open === it.id, svc, !!frontier].join('\u0001');
       if (c.dataset.sig !== sig) {
         c.dataset.sig = sig;
         c.innerHTML = cardHtml(it);
         c.querySelector('.pin').onclick = (e) => { e.stopPropagation(); send({ type: it.state === 'pinned' ? 'unpin' : 'pin', id: it.id }); };
-        c.onclick = (e) => { if (e.target.tagName === 'A') return; open = open === it.id ? null : it.id; if (open) send({ type: 'pull', id: it.id }); render(); };
+        c.onclick = (e) => {
+          if (e.target.tagName === 'A') {
+            if (e.target.dataset.answer) { e.preventDefault(); open = it.id; send({ type: 'answer', id: it.id, frontier }); render(); }
+            else if (e.target.dataset.beside) { e.preventDefault(); openBeside(e.target.href); }
+            return;
+          }
+          open = open === it.id ? null : it.id; if (open) send({ type: 'pull', id: it.id }); render();
+        };
       }
       if (list.children[i] !== c) list.insertBefore(c, list.children[i] || null);
     });

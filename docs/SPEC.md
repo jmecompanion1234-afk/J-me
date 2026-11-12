@@ -262,6 +262,16 @@ whatever media is chosen. What that means for each shape:
   real: the anticipator is told to name a specific video, clip, scene, talk or
   performance, and the gate dropped from 0.8 to 0.6. Not built: finding the exact scene
   inside a video (no open API does that).
+- **Answers inside the card (v0.5.0, 2026-11-11).** The maintainer: "can the prompts be piped into
+  the plugin without replacing the tab of the video?" Two answers. The hand-off link now
+  opens the AI in a small popup window beside the video (the service worker opens it; the
+  listened-to tab keeps focus). And `extension/src/frontier.ts`: with the user's own key
+  (OpenAI, Anthropic, or any OpenAI-compatible server such as Ollama with no key), every
+  card gets "Answer here" and the answer lands in the card through `engine.setAnswer`.
+  The key lives in chrome.storage.local; only the question and the anchoring moment go
+  out, only on the press. This is the "frontier on demand" rung of the model ladder made
+  concrete. Also 0.4.1: the page's title, author and description become brain context;
+  0.4.2: the star toggles off again.
 
 The engine stays the same under all four: a text-in / events-out plug-in (section 9a; the
 segment door and its `docs/API.md` are the next build), with the audio ear as one optional

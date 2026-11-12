@@ -55,7 +55,10 @@ in the panel, or the extension's Options). The panel also shows the cards while 
 being listened to, if you prefer it to the overlay.
 
 **Settings** (⚙ in the panel): which AI the cards hand off to, the microphone
-permission, and which brain to use.
+permission, which brain to use, and, optionally, your own API key so the answer appears
+inside the card (**Answer here**) while the video keeps playing. Without a key, "Ask
+ChatGPT" opens the AI in a small window beside the video, not in place of it. "Custom"
+points at any OpenAI-compatible server, Ollama included, with no key.
 
 **Which brain.** J-me picks the best brain it can find, in this order:
 

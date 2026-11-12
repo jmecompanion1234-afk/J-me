@@ -9,6 +9,7 @@ import type { EngineEvent } from '../../engine/src/types.ts';
 import { Ear, configureRuntime } from './ear.ts';
 import { pipeline } from '@huggingface/transformers';
 import { pickBrain, type Brain, type BrainOptions } from './brains.ts';
+import { frontierAnswer, type FrontierSettings } from './frontier.ts';
 import { ANTICIPATOR_SYSTEM } from '../../engine/src/anticipator.ts';
 
 const SAMPLE_RATE = 16000;
@@ -219,7 +220,24 @@ async function stop(): Promise<void> {
   engine = null;
 }
 
-interface Command { type: string; id?: string; text?: string }
+interface Command { type: string; id?: string; text?: string; frontier?: FrontierSettings }
+
+/** Answer one card with the user's frontier model. The settings travel with the request (the
+ *  panel reads them from storage; this page has no storage of its own in branded Chrome). */
+async function answerHere(id: string, f: FrontierSettings | undefined): Promise<void> {
+  if (!engine) return;
+  const it = engine.queue.snapshot().find((i) => i.id === id);
+  if (!it) return;
+  if (!f || (!f.key && f.provider !== 'custom')) { engine.setAnswer(id, 'No key yet: open J-me settings and add your API key under "Answer inside J-me".', 'frontier'); return; }
+  engine.setAnswer(id, '…', 'frontier');
+  try {
+    const question = it.kind === 'prompt' ? it.text : `${it.text}\n\nWhat should I know about this?`;
+    const text = await frontierAnswer(f, question, (it.anchor?.text ?? '').replace(/\s+/g, ' ').slice(0, 300));
+    engine.setAnswer(id, text || '(no answer)', 'frontier');
+  } catch (e) {
+    engine.setAnswer(id, 'could not answer: ' + errText(e), 'frontier');
+  }
+}
 
 function command(msg: Command): void {
   if (!engine) return;
@@ -229,6 +247,7 @@ function command(msg: Command): void {
     const it = engine.pull(msg.id);
     if (it) event({ type: 'item', now: engine.now, item: it, change: 'pulled' });
   } else if (msg.type === 'ask' && msg.text) engine.ask(msg.text);
+  else if (msg.type === 'answer' && msg.id) void answerHere(msg.id, msg.frontier);
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {

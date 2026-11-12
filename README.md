@@ -17,7 +17,8 @@ show: nobody asks him to prepare, but when someone says "pull that up," it is up
   pictures that go with it, and the videos, which run as two strips across the top of
   the panel as the talk moves. A video plays inside the panel when clicked.
   Questions the talk raises become cards with one button that opens them in your own
-  AI (ChatGPT, Claude or Perplexity), with the moment baked in.
+  AI (ChatGPT, Claude or Perplexity) in a window beside the video, with the moment baked
+  in; add your own API key in settings and the answer lands inside the card instead.
 - **Any brain you like.** The extension finds the best one it can: Ollama if you run it,
   the browser's built-in model if it has one, else a small model in the browser itself.
   Every card also hands off to ChatGPT, Claude or Perplexity in your own account.

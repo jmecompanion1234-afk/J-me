@@ -169,6 +169,10 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     reply();
   } else if (msg.type === 'state') {
     reply({ source });
+  } else if (msg.type === 'open' && typeof msg.url === 'string' && /^https:\/\//.test(msg.url)) {
+    // The AI's page in its own small window, so the listened-to tab keeps focus.
+    chrome.windows.create({ url: msg.url, type: 'popup', width: 560, height: 760, focused: true }).catch(() => chrome.tabs.create({ url: msg.url, active: false }));
+    reply({ ok: true });
   } else if (msg.type === 'mic') {
     (async () => {
       if (!msg.on) { await stop(); reply({ ok: true }); return; }

@@ -2,6 +2,27 @@
 const micstate = document.getElementById('micstate');
 const brain = document.getElementById('brain');
 
+// A frontier model answering inside the cards, with the user's own key.
+const DEFAULTS = { openai: { model: 'gpt-4.1-mini', baseUrl: 'https://api.openai.com/v1' }, anthropic: { model: 'claude-sonnet-5-5', baseUrl: 'https://api.anthropic.com' }, custom: { model: 'qwen2.5:7b', baseUrl: 'http://127.0.0.1:11434/v1' } };
+const fprov = document.getElementById('fprov'), fkey = document.getElementById('fkey'), fmodel = document.getElementById('fmodel'), furl = document.getElementById('furl'), fnote = document.getElementById('fnote');
+function saveFrontier() {
+  const provider = fprov.value;
+  document.getElementById('furlrow').style.display = provider === 'custom' ? '' : 'none';
+  if (!provider) { chrome.storage.local.set({ frontier: null }); fnote.textContent = ''; return; }
+  const d = DEFAULTS[provider];
+  fmodel.placeholder = d.model; furl.placeholder = d.baseUrl;
+  const f = { provider, key: fkey.value.trim(), model: fmodel.value.trim() || d.model, baseUrl: furl.value.trim() || d.baseUrl };
+  chrome.storage.local.set({ frontier: f });
+  fnote.textContent = provider !== 'custom' && !f.key ? 'Add the key to switch it on.' : `On: ${f.model} at ${f.baseUrl}`;
+}
+for (const el of [fprov, fkey, fmodel, furl]) el.onchange = saveFrontier;
+chrome.storage.local.get('frontier').then((v) => {
+  const f = v.frontier;
+  if (f) { fprov.value = f.provider; fkey.value = f.key || ''; fmodel.value = f.model || ''; furl.value = f.baseUrl || ''; }
+  document.getElementById('furlrow').style.display = fprov.value === 'custom' ? '' : 'none';
+  if (f) fnote.textContent = f.provider !== 'custom' && !f.key ? 'Add the key to switch it on.' : `On: ${f.model} at ${f.baseUrl}`;
+});
+
 const overlay = document.getElementById('overlay');
 overlay.onchange = () => chrome.storage.local.set({ overlayOnPage: overlay.checked });
 chrome.storage.local.get(['aiService', 'brainOrder', 'overlayOnPage']).then((v) => {

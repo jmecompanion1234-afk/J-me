@@ -229,6 +229,16 @@ export class Engine {
     this.queue.unpin(id, this.now);
   }
 
+  /** An answer produced outside the stage path (a frontier model, on request). */
+  setAnswer(id: string, answer: string, source: string): void {
+    const it = this.queue.snapshot().find((i) => i.id === id);
+    if (!it) return;
+    it.answer = answer;
+    it.sources = [...(it.sources ?? []).filter((s) => s !== source), source];
+    this.emit({ type: 'item', now: this.now, item: it, change: 'ready' });
+    this.emit({ type: 'queue', now: this.now, items: this.queue.snapshot() });
+  }
+
   pull(id: string): QueueItem | undefined {
     return this.queue.pull(id, this.now);
   }

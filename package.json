@@ -1,6 +1,6 @@
 {
   "name": "j-me",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "A local, private 'pull that up' buffer for live conversations: it listens and keeps the searches and prompts the talk is about to need.",
   "license": "MIT",

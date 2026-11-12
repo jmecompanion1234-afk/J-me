@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "J-me",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "A switch on any tab, or on the microphone: J-me listens and keeps the searches, pictures, videos and questions the talk is about to need, with a hand-off to your own AI. Everything runs in the browser.",
   "minimum_chrome_version": "128",
   "action": {
@@ -35,7 +35,9 @@
   "host_permissions": [
     "https://html.duckduckgo.com/*",
     "http://127.0.0.1:11434/*",
-    "https://www.youtube.com/*"
+    "https://www.youtube.com/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
