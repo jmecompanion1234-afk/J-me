@@ -42,6 +42,7 @@
 .empty{color:#8a8f9c;font-size:13px;padding:8px}
 .card{background:#171a21;border:1px solid #262a33;border-radius:8px;padding:8px 10px;cursor:pointer;transition:opacity .4s}
 .card:hover{background:#1e222b}.card.pinned{border-color:#f2b84b}.card.prompt{border-left:3px solid #c792ea}
+.card.math{border-left:3px solid #f27b7b}.card.math .answer{color:#f2b84b;margin-top:4px}
 .card .t{display:flex;gap:6px;align-items:flex-start}.card .t span{flex:1}
 .card .pin{all:unset;cursor:pointer;color:#8a8f9c;font-size:14px}.card.pinned .pin{color:#f2b84b}
 .card .why{color:#8a8f9c;font-size:12px;margin-top:2px}
@@ -183,9 +184,9 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
   let emptyNode = null;
   function cardHtml(it) {
     const ready = (it.results && it.results.length) || it.answer;
-    let html = `<div class="t">${ready ? '<i class="dot"></i>' : ''}<span>${esc(it.text)}</span><button class="pin" title="${it.state === 'pinned' ? 'Release it back into the stream' : 'Keep it'}">${it.state === 'pinned' ? '★' : '☆'}</button></div><div class="why">${esc(it.why || '')}</div>`;
+    let html = `<div class="t">${ready ? '<i class="dot"></i>' : ''}<span>${it.kind === 'math' ? '⚠ ' : ''}${esc(it.text)}</span><button class="pin" title="${it.state === 'pinned' ? 'Release it back into the stream' : 'Keep it'}">${it.state === 'pinned' ? '★' : '☆'}</button></div><div class="why">${esc(it.why || '')}</div>`;
     if (it.kind === 'prompt') html += `<div class="hand">${aiLink(it, false)}</div>`;
-    if (it.kind === 'prompt' && it.answer && open !== it.id) html += `<div class="answer">${esc(it.answer)}</div>`;
+    if ((it.kind === 'prompt' || it.kind === 'math') && it.answer && open !== it.id) html += `<div class="answer">${esc(it.answer)}</div>`;
     if (open === it.id) {
       html += '<div class="res">';
       if (it.answer) html += `<div class="answer">${esc(it.answer)}</div>`;
@@ -210,7 +211,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
     items.forEach((it, i) => {
       let c = cardNodes.get(it.id);
       if (!c) { c = document.createElement('div'); cardNodes.set(it.id, c); c.dataset.sig = ''; }
-      c.className = 'card' + (it.state === 'pinned' ? ' pinned' : '') + (it.kind === 'prompt' ? ' prompt' : '');
+      c.className = 'card' + (it.state === 'pinned' ? ' pinned' : '') + (it.kind === 'prompt' ? ' prompt' : '') + (it.kind === 'math' ? ' math' : '');
       c.style.opacity = (0.4 + 0.6 * it.score).toFixed(2);
       const sig = [it.state, it.text, it.why, (it.results || []).length, it.answer ? it.answer.length : 0, open === it.id, svc, !!frontier].join('\u0001');
       if (c.dataset.sig !== sig) {

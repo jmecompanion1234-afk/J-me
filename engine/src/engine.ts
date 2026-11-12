@@ -7,6 +7,7 @@ import { webSearch } from './providers/web.ts';
 import { wikiLookup } from './providers/wiki.ts';
 import { commonsImages } from './providers/images.ts';
 import { youtubeSearch } from './providers/video.ts';
+import { findNumberIssues, hasFigure } from './numbers.ts';
 import type { LocalDocs } from './providers/localdocs.ts';
 
 export interface EngineOptions {
@@ -119,6 +120,7 @@ export class Engine {
     this.transcript.add(seg);
     this.now = Math.max(this.now, seg.t1);
     this.emit({ type: 'segment', segment: seg });
+    this.checkNumbers(seg);
     if (this.pausedAt === null && this.now - this.lastAnticipate >= this.opts.anticipateEvery && !this.anticipating) {
       this.lastAnticipate = this.now;
       this.anticipating = this.anticipate().finally(() => (this.anticipating = null));
@@ -160,6 +162,23 @@ export class Engine {
     return this.anticipating;
   }
 
+  /** The calculator: a segment whose own numbers contradict each other becomes a card at once,
+   *  no model involved. The last two segments are checked together (a sentence can span a cut). */
+  private lastChecked = '';
+  private checkNumbers(seg: TranscriptSegment): void {
+    const prev = this.transcript.segments[this.transcript.segments.length - 2];
+    const texts = [seg.text, prev ? `${prev.text} ${seg.text}` : ''].filter(Boolean);
+    for (const text of texts) {
+      for (const issue of findNumberIssues(text)) {
+        const key = issue.calc;
+        if (this.lastChecked === key) continue;
+        this.lastChecked = key;
+        const [item] = this.queue.admit([{ kind: 'math', text: `Do the numbers add up? ${issue.claim.slice(0, 140)}`, why: 'the calculator', confidence: 1 }], [prev, seg].filter((x): x is TranscriptSegment => !!x), this.now);
+        if (item) { item.answer = issue.calc; item.sources = ['calculator']; }
+      }
+    }
+  }
+
   async anticipate(windowSec = this.opts.windowSec, maxItems?: number): Promise<void> {
     const at = this.now;
     const window = this.transcript.window(at, windowSec);
@@ -174,6 +193,8 @@ export class Engine {
       this.status(`thought of ${cands.length} idea${cands.length === 1 ? '' : 's'} in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
       // Anchor on the last ~20 s: that is the moment that earned the items.
       const anchor = window.filter((s) => s.t1 >= at - 20);
+      // A spoken figure is a priority: it stages without waiting for a recurrence.
+      for (const c of cands) if (c.kind !== 'prompt' && hasFigure(c.text)) c.confidence = Math.max(c.confidence, 0.85);
       this.queue.admit(cands, anchor.length ? anchor : window, at);
     } catch (e) {
       this.emit({ type: 'error', now: at, text: `anticipator: ${e instanceof Error ? e.message : String(e)}` });
@@ -196,6 +217,15 @@ export class Engine {
         // A prompt is answered by the local brain (when allowed) AND searched, so the card has
         // links even where the brain is slow; the "ask your AI" button needs nothing fetched.
         const jobs: Promise<void>[] = [];
+        if (item.kind === 'math') {
+          // The calculator already answered; nothing to fetch.
+          item.results = [];
+          item.images = [];
+          item.videos = [];
+          item.sources = ['calculator'];
+          this.queue.markReady(item.id, this.now);
+          return;
+        }
         if (item.kind === 'prompt' && this.opts.answerPrompts) {
           jobs.push((async () => {
             item.answer = await answerPrompt(this.anticipator.opts, item.text, this.transcript.windowText(this.now, 180));

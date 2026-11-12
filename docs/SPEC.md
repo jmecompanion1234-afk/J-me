@@ -282,6 +282,16 @@ whatever media is chosen. What that means for each shape:
   jme_transcript, jme_ask, jme_pin, jme_unpin, jme_pause, jme_resume, jme_wait. Agent asks
   are labelled "asked by <agent>" and capped at six a minute; the pause button stays the
   human's override. Also 0.5.1 pause/resume with catch-up, 0.5.2 side-panel detection.
+- **The calculator (v0.7.0, 2026-11-12).** The maintainer: "any time a figure, calculation, ratio,
+  stat... the figure would be put into a calculator and would flag it as an inaccuracy...
+  25% x and 50% y and 50% z... an inherent fallacy", and figures get priority as searches.
+  `engine/src/numbers.ts`, deterministic, no model: number words to digits; four checks
+  (parts of a whole past 100%, excluding "N% of <different whole>"; from-A-to-B against a
+  stated % change; "A out of B" against a stated %; doubled/tripled/halved/"N times"
+  against a from-to). A hit becomes a `math` card at once (confidence 1, answer = the
+  arithmetic, red edge, no fetch). Figures: the brain is told a spoken figure is a priority,
+  and any non-prompt candidate carrying a figure stages at confidence 0.85. Conservative on
+  purpose: a false flag costs trust.
 
 The engine stays the same under all four: a text-in / events-out plug-in (section 9a; the
 segment door and its `docs/API.md` are the next build), with the audio ear as one optional

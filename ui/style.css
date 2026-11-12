@@ -134,3 +134,5 @@ footer { border-top: 1px solid var(--line); padding: 8px 16px 12px; display: gri
 .videos a:hover{outline:1px solid #f2b84b}.videos img{width:150px;height:84px;display:block;object-fit:cover}
 .videos .d{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.75);color:#fff;font-size:11px;padding:1px 4px;border-radius:3px}
 .videos .t{position:absolute;left:0;right:0;top:0;padding:3px 5px;background:linear-gradient(rgba(0,0,0,.8),transparent);color:#fff;font-size:11px;line-height:1.2;max-height:2.4em;overflow:hidden}
+
+.card.math{border-left:3px solid #f27b7b}

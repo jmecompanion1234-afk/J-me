@@ -11,7 +11,11 @@ that opens the question in your own AI with the moment baked in, the pictures th
 the picture strip across the top of the panel, and the videos that feed the video strip
 under it. In the side panel, a video plays right there when you click it; on a page it
 opens YouTube. Purple-edged cards are
-questions the talk raised, for your AI rather than a search.
+questions the talk raised, for your AI rather than a search. Red-edged cards come from
+the calculator: a sentence whose own numbers contradict each other (parts of a whole
+adding past 100%, a "doubled" that did not, a stated percentage change that does not match
+its before and after), with the arithmetic shown. Any spoken figure also gets priority as
+a search, so the claim is checkable while it is still being made.
 
 ## 1. The browser switch (the one to use)
 

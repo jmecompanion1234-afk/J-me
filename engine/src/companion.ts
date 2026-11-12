@@ -90,6 +90,8 @@ export function buildPrompt(kind: ItemKind, text: string, excerpt: string, at: n
       return `${where}: ${text}${ctx}`;
     case 'media':
       return `${where}, the speakers referred to ${text}.${ctx} What is being referred to, and where can it be seen?`;
+    case 'math':
+      return `${where}: ${text}${ctx} Check the arithmetic and say whether the figures can all be true at once.`;
   }
 }
 

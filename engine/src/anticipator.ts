@@ -39,6 +39,7 @@ Rules:
 - Only propose what the conversation itself makes relevant RIGHT NOW. Skip small talk.
 - Be concrete. Every item names a specific thing: a person, title, organization, number, date, quote, term, event, law, product or place that was actually said. Nothing generic.
 - Strongly prefer items someone would plausibly say "pull that up" about: a contested fact, a name nobody can quite remember, a statistic, a date, a book or paper, "what was that called", "look that up".
+- A spoken figure is a priority: a percentage, a count, a price, a year, a ratio, "X times". Propose the search that checks it, quoting the figure as said ("20% of apples are orange" -> search "share of apples that are orange"), confidence 0.8 or more.
 - Never propose: "clip of <speaker> discussing <topic>", "compare <speaker>'s views with ...", "summarize what <speaker> said", "history of <broad topic>", "context for ...". Those are filler. A "media" item exists only when a specific clip, scene, chart, photo or timestamp was referenced by the speakers.
 - A "prompt" item names the claim it checks ("Is it true that the Antikythera mechanism predicted eclipses?"), never "fact-check this" or "explain the discussion". One per call at most.
 - Do not repeat anything already in the queue (given). Do not propose near-duplicates.

@@ -60,7 +60,7 @@ function renderQueue() {
   if (!items.length) { queueEl.innerHTML = '<div class="empty">Listening builds the queue. Nothing staged yet.</div>'; return; }
   for (const it of items) {
     const card = document.createElement('div');
-    card.className = 'card' + (it.state === 'pinned' ? ' pinned' : '') + (it.kind === 'prompt' ? ' prompt' : '');
+    card.className = 'card' + (it.state === 'pinned' ? ' pinned' : '') + (it.kind === 'prompt' ? ' prompt' : '') + (it.kind === 'math' ? ' math' : '');
     card.style.opacity = (0.35 + 0.65 * it.score).toFixed(2);
     card.innerHTML =
       `<div class="text">${esc(it.text)}</div>` +

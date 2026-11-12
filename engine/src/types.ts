@@ -13,7 +13,8 @@ export interface TranscriptSegment {
   speaker?: string;
 }
 
-export type ItemKind = 'search' | 'prompt' | 'lookup' | 'media';
+/** math: a card the calculator raised; its `answer` is the arithmetic */
+export type ItemKind = 'search' | 'prompt' | 'lookup' | 'media' | 'math';
 
 export type ItemState = 'candidate' | 'staged' | 'ready' | 'pinned' | 'pulled' | 'expired';
 

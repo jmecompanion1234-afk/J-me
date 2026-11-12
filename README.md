@@ -13,6 +13,9 @@ show: nobody asks him to prepare, but when someone says "pull that up," it is up
 - **A switch, not a workflow.** Click the icon on a tab, the queue opens beside the page
   in the browser's side panel, as wide as you drag it. Click again to stop. Nothing to install but the extension. For a call in another app
   or the room, the side panel has a microphone switch.
+- **The calculator.** A sentence whose own numbers contradict each other ("25% x, 50% y
+  and 50% z") becomes a red card with the arithmetic, instantly and without a model; any
+  spoken figure gets priority as a search, so the claim is checkable as it is made.
 - **Links, pictures, videos and questions.** Each card carries its web links, the
   pictures that go with it, and the videos, which run as two strips across the top of
   the panel as the talk moves. A video plays inside the panel when clicked.
