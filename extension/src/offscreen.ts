@@ -248,6 +248,8 @@ function command(msg: Command): void {
     if (it) event({ type: 'item', now: engine.now, item: it, change: 'pulled' });
   } else if (msg.type === 'ask' && msg.text) engine.ask(msg.text);
   else if (msg.type === 'answer' && msg.id) void answerHere(msg.id, msg.frontier);
+  else if (msg.type === 'pause') engine.pause();
+  else if (msg.type === 'resume') void engine.resume();
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {

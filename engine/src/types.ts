@@ -112,4 +112,5 @@ export type EngineEvent =
   | { type: 'queue'; now: number; items: QueueItem[] }
   | { type: 'item'; now: number; item: QueueItem; change: 'born' | 'staged' | 'ready' | 'expired' | 'pinned' | 'unpinned' | 'pulled' | 'touched' }
   | { type: 'status'; now: number; text: string }
+  | { type: 'paused'; now: number; paused: boolean }
   | { type: 'error'; now: number; text: string };

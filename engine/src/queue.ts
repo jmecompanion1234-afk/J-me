@@ -148,6 +148,15 @@ export class Queue {
     this.emit({ type: 'item', now, item: it, change: 'pinned' });
   }
 
+  /** After a pause: the live items' clocks move forward by the pause, so none of them aged
+   *  while the queue was held. */
+  shift(dt: number): void {
+    for (const it of this.live.values()) {
+      it.touched += dt;
+      it.born += dt;
+    }
+  }
+
   /** The star off again: the item goes back into the stream with a fresh moment, so it fades
    *  from now rather than vanishing at once. */
   unpin(id: string, now: number): void {

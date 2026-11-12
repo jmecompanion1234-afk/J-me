@@ -54,12 +54,12 @@ export class Anticipator {
     this.opts = opts;
   }
 
-  async propose(windowText: string, queueTexts: string[], mode: Mode, context?: string): Promise<Candidate[]> {
+  async propose(windowText: string, queueTexts: string[], mode: Mode, context?: string, maxItems = this.opts.maxItems): Promise<Candidate[]> {
     if (windowText.trim().length < 20) return [];
     const user =
       `Mode: ${mode === 'media' ? 'listening to media (podcast/video/lecture)' : 'conversation in the room'}\n` +
       (context ? `What is playing (from the page; use it to know who is talking and what about, and to spell names right):\n${context}\n` : '') +
-      `N: ${this.opts.maxItems}\n` +
+      `N: ${maxItems}\n` +
       `Already in queue:\n${queueTexts.length ? queueTexts.map((t) => `- ${t}`).join('\n') : '(empty)'}\n\n` +
       `Most recent transcript:\n"""\n${windowText}\n"""`;
     const raw = await brainOf(this.opts)(
@@ -69,7 +69,7 @@ export class Anticipator {
       ],
       { json: true, temperature: 0.3, maxTokens: 600, timeoutMs: this.opts.timeoutMs },
     );
-    return parseCandidates(raw, this.opts.maxItems);
+    return parseCandidates(raw, maxItems);
   }
 }
 

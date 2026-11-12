@@ -21,7 +21,8 @@ function renderImages() {
   imagesEl.innerHTML = pics.map((p) => `<a href="${esc(p.page)}" target="_blank" rel="noopener" title="${esc(p.title)}"><img src="${esc(p.thumb)}" alt="${esc(p.title)}" referrerpolicy="no-referrer" loading="lazy"></a>`).join('');
 }
 
-let ws, audioCtx, stream, micStream, workletNode, items = [], openId = null;
+let ws, audioCtx, stream, micStream, workletNode, items = [], openId = null, paused = false;
+document.getElementById('pause').onclick = () => send({ type: paused ? 'resume' : 'pause' });
 
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -40,6 +41,7 @@ function handle(ev) {
   else if (ev.type === 'item' && ev.change === 'pulled') showItem(ev.item);
   else if (ev.type === 'item' && ev.change === 'ready' && ev.item.id === openId) showItem(ev.item);
   else if (ev.type === 'hello') setStatus(`${ev.mode} mode · session ${ev.sessionId.slice(-8)}`);
+  else if (ev.type === 'paused') { paused = !!ev.paused; $('pause').textContent = paused ? '▶ Run' : '⏸ Hold'; }
 }
 
 function setStatus(t) { statusEl.textContent = t; }
@@ -137,6 +139,7 @@ async function startAudio(kind) {
     // keep the graph alive without playing it back
     const sink = audioCtx.createGain(); sink.gain.value = 0; workletNode.connect(sink); sink.connect(audioCtx.destination);
     sourceEl.disabled = true;
+    $('pause').classList.remove('hidden');
     setStatus(kind === 'mic' ? 'listening to the room' : kind === 'both' ? 'listening to speakers and mic' : 'listening to media');
     if (canFloat && !pip) floatBtn.classList.remove('hidden');
     return true;
@@ -153,6 +156,7 @@ function stopAudio() {
   audioCtx?.close();
   sourceEl.disabled = false;
   floatBtn.classList.add('hidden');
+  $('pause').classList.add('hidden');
   setStatus('off');
 }
 listenEl.onchange = async (e) => {

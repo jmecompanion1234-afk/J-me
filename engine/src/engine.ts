@@ -82,6 +82,8 @@ export class Engine {
   private lastAnticipate = -Infinity;
   private anticipating: Promise<void> | null = null;
   private pendingFetches = new Set<Promise<void>>();
+  /** when the queue was paused (the transcript keeps flowing), or null */
+  pausedAt: number | null = null;
   stats = { anticipatorCalls: 0, anticipatorMs: 0, candidates: 0, fetches: 0 };
 
   constructor(opts: Partial<EngineOptions> = {}) {
@@ -117,7 +119,7 @@ export class Engine {
     this.transcript.add(seg);
     this.now = Math.max(this.now, seg.t1);
     this.emit({ type: 'segment', segment: seg });
-    if (this.now - this.lastAnticipate >= this.opts.anticipateEvery && !this.anticipating) {
+    if (this.pausedAt === null && this.now - this.lastAnticipate >= this.opts.anticipateEvery && !this.anticipating) {
       this.lastAnticipate = this.now;
       this.anticipating = this.anticipate().finally(() => (this.anticipating = null));
       return this.anticipating;
@@ -125,21 +127,47 @@ export class Engine {
     return null;
   }
 
-  /** Advance the clock and rescore. */
+  /** Advance the clock and rescore. Held still while paused: the transcript still arrives. */
   tick(now: number): void {
     this.now = Math.max(this.now, now);
+    if (this.pausedAt !== null) return;
     this.queue.tick(this.now, this.transcript.windowTerms(this.now, this.opts.windowSec), (t) => this.transcript.termsSince(t));
     this.emit({ type: 'queue', now: this.now, items: this.queue.snapshot() });
   }
 
-  async anticipate(): Promise<void> {
+  /** Hold the queue (no decay, no new cards) while the transcript keeps flowing, so the cards
+   *  can be read and dug into. */
+  pause(): void {
+    if (this.pausedAt !== null) return;
+    this.pausedAt = this.now;
+    this.emit({ type: 'paused', now: this.now, paused: true });
+    this.status('paused: the cards hold still, the transcript keeps going');
+  }
+
+  /** Let it run again, and catch up: the brain reads what was said during the pause. */
+  resume(): Promise<void> | null {
+    if (this.pausedAt === null) return null;
+    const held = Math.max(0, this.now - this.pausedAt);
+    this.pausedAt = null;
+    this.queue.shift(held);
+    this.emit({ type: 'paused', now: this.now, paused: false });
+    this.emit({ type: 'queue', now: this.now, items: this.queue.snapshot() });
+    if (held < 10) return null;
+    this.status(`catching up on ${Math.round(held)} s`);
+    this.lastAnticipate = this.now;
+    // Everything said during the pause (capped), and room for more items than a normal pass.
+    this.anticipating = this.anticipate(Math.min(held + 10, 600), Math.min(8, this.anticipator.opts.maxItems + 3)).finally(() => (this.anticipating = null));
+    return this.anticipating;
+  }
+
+  async anticipate(windowSec = this.opts.windowSec, maxItems?: number): Promise<void> {
     const at = this.now;
-    const window = this.transcript.window(at, this.opts.windowSec);
-    const text = this.transcript.windowText(at, this.opts.windowSec);
+    const window = this.transcript.window(at, windowSec);
+    const text = this.transcript.windowText(at, windowSec);
     const queued = this.queue.snapshot().map((i) => i.text);
     const t0 = Date.now();
     try {
-      const cands = await this.anticipator.propose(text, queued, this.opts.mode, this.opts.context);
+      const cands = await this.anticipator.propose(text, queued, this.opts.mode, this.opts.context, maxItems);
       this.stats.anticipatorCalls++;
       this.stats.anticipatorMs += Date.now() - t0;
       this.stats.candidates += cands.length;

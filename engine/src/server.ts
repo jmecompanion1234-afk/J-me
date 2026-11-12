@@ -112,6 +112,8 @@ export async function serve(o: ServeOptions): Promise<void> {
         const it = engine.pull(msg.id);
         if (it) ws.send(JSON.stringify({ type: 'item', now: clock(), item: it, change: 'pulled' } satisfies EngineEvent));
       } else if (msg.type === 'ask' && msg.text) engine.ask(msg.text);
+      else if (msg.type === 'pause') engine.pause();
+      else if (msg.type === 'resume') void engine.resume();
       else if (msg.type === 'start') {
         // The switch flipped on: a new listen starts from an empty queue.
         engine.reset();

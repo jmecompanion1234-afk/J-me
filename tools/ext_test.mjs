@@ -1,7 +1,7 @@
 // Drive the extension in a real Chrome and play a speech file through it, end to end:
 // ear (VAD + Moonshine in the browser) -> engine -> brain -> queue. Prints what happens.
 //
-//   node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR] [--mic]
+//   node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR] [--mic] [--pause]
 //
 // --mic feeds the file through Chrome's fake microphone instead (the side panel's switch path):
 // permission is auto-granted, the panel page is opened in a tab and its cards are counted.
@@ -65,6 +65,7 @@ const pump = async () => {
     else if (ev.type === 'item' && ev.change !== 'touched') console.log(`${since()}  ${ev.change.padEnd(7)} ${ev.item.kind.padEnd(6)} ${ev.item.text}  (${ev.item.score.toFixed(2)}${ev.item.results ? `, ${ev.item.results.length} results` : ''}${ev.item.images && ev.item.images.length ? `, ${ev.item.images.length} pictures` : ''}${ev.item.videos && ev.item.videos.length ? `, ${ev.item.videos.length} videos` : ''})`);
     else if (ev.type === 'error') console.log(`${since()}  ! ${ev.text}`);
     else if (ev.type === 'hello') console.log(`${since()}  hello`);
+    else if (ev.type === 'paused') console.log(`${since()}  ${ev.paused ? 'PAUSED (queue held, transcript continues)' : 'RESUMED'}`);
     if (ev.type === 'status' && ev.text === 'file finished') done = true;
   }
 };
@@ -91,7 +92,13 @@ if (mic) {
   console.log('start:', JSON.stringify(r));
 }
 const deadline = Date.now() + (seconds ? seconds * 1000 : 20 * 60 * 1000);
-while (!done && Date.now() < deadline) await new Promise((r) => setTimeout(r, 1000));
+const pauseAt = args.includes('--pause') ? Date.now() + 20_000 : Infinity; // hold 25 s in the middle, then catch up
+let pausedAt = 0;
+while (!done && Date.now() < deadline) {
+  await new Promise((r) => setTimeout(r, 1000));
+  if (!pausedAt && Date.now() >= pauseAt) { pausedAt = Date.now(); await send({ type: 'ws', msg: { type: 'pause' } }); console.log(`${since()}  >> pause`); }
+  else if (pausedAt > 0 && Date.now() - pausedAt > 25_000) { pausedAt = -1; await send({ type: 'ws', msg: { type: 'resume' } }); console.log(`${since()}  >> resume`); }
+}
 clearInterval(pumping);
 // "Answer here" through a custom OpenAI-compatible endpoint (Ollama's), on the first prompt card.
 {

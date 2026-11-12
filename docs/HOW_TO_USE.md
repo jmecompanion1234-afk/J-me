@@ -38,6 +38,9 @@ Then, every time:
    - Star a card to keep it from fading. Star it again to release it back into the
      stream; it fades from that moment on.
    - Type in the Ask bar to jump the queue with your own question.
+   - Press ⏸ to hold the cards still while you dig into one. The transcript keeps
+     going. Press ▶ and the brain catches up on everything said while you were reading,
+     and the cards start fading again from that moment.
    - The on-page panel, when enabled: drag it by its title bar, the dash collapses it,
      the × hides it, and it follows the player into fullscreen.
 3. Click the icon again to stop.
