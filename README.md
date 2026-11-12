@@ -27,9 +27,9 @@ Status: early, working, rough edges. See [docs/HOW_TO_USE.md](docs/HOW_TO_USE.md
 
 ## Install: the extension (Chrome or Edge, nothing else)
 
-1. Download `J-me-extension.zip` from the
-   [latest release](https://github.com/jmecompanion1234-afk/J-me/releases) and unzip it
-   (or clone this repository; the folder is `extension/`).
+1. Download **[J-me-extension.zip](https://github.com/jmecompanion1234-afk/J-me/releases/latest/download/J-me-extension.zip)**
+   (that link always gives the latest release) and unzip it. Or clone this repository;
+   the folder is `extension/`.
 2. Open `chrome://extensions` (Edge: `edge://extensions`), turn on **Developer mode**,
    press **Load unpacked**, pick the `extension` folder, and pin the J-me icon.
 3. Click the icon on any tab with a video or call. The first time, J-me downloads its
