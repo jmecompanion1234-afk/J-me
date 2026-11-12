@@ -35,16 +35,13 @@ async function send(msg, tries = 40) {
   throw new Error('the J-me page did not answer' + (last ? ': ' + last.message : ''));
 }
 
-async function startTab(tab) {
-  // The side panel is the big view (Chrome makes room for it; drag its edge to half the
-  // screen). Opening it needs the click itself, so it goes first. The small panel on the
-  // page is a setting.
-  const { overlayOnPage } = await chrome.storage.local.get('overlayOnPage');
-  try { await chrome.sidePanel.open({ windowId: tab.windowId }); } catch (e) { console.warn('side panel', e); }
+async function startTab(tab, panelOpened) {
   await ensureOffscreen();
   const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
   source = { kind: 'tab', tabId: tab.id };
-  if (overlayOnPage) await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['overlay.js'] });
+  // The small panel on the page is a setting, and the fallback when the side panel could not open.
+  const { overlayOnPage } = await chrome.storage.local.get('overlayOnPage');
+  if (overlayOnPage || !panelOpened) await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['overlay.js'] });
   chrome.action.setBadgeText({ text: '…', tabId: tab.id });
   chrome.action.setBadgeBackgroundColor({ color: '#f2b84b', tabId: tab.id });
   const r = await send({ type: 'start', streamId, title: tab.title, brain: await brainPrefs() });
@@ -96,9 +93,13 @@ function failed(e, tab) {
 
 chrome.action.onClicked.addListener(async (tab) => {
   if (source && source.kind === 'tab' && source.tabId === tab.id) { await stop(); return; }
+  // The side panel is the big view (Chrome makes room for it; drag its edge to half the
+  // screen). Chrome only opens it in direct response to the click, before any await, so it
+  // goes first, synchronously.
+  const opening = chrome.sidePanel.open({ windowId: tab.windowId }).then(() => true, (e) => { console.warn('side panel did not open', e); return false; });
   if (source) await stop();
   try {
-    await startTab(tab);
+    await startTab(tab, await opening);
   } catch (e) {
     failed(e, tab);
   }
