@@ -11,11 +11,15 @@ show: nobody asks him to prepare, but when someone says "pull that up," it is up
   your own machine, inside the browser. Audio and transcript never leave it. The only
   thing that goes out is the lookup for items that earn one.
 - **A switch, not a workflow.** Click the icon on a tab, the queue appears on the page.
-  Click again to stop. Nothing to install but the extension.
+  Click again to stop. Nothing to install but the extension. For a call in another app
+  or the room, the side panel has a microphone switch.
+- **Links, pictures and questions.** Each card carries its web links and the pictures
+  that go with it, which run as a strip across the top of the panel as the talk moves.
+  Questions the talk raises become cards with one button that opens them in your own
+  AI (ChatGPT, Claude or Perplexity), with the moment baked in.
 - **Any brain you like.** The extension finds the best one it can: Ollama if you run it,
   the browser's built-in model if it has one, else a small model in the browser itself.
-  Every item also carries a prompt with the moment baked in, ready to hand to ChatGPT,
-  Claude or Perplexity in your own account.
+  Every card also hands off to ChatGPT, Claude or Perplexity in your own account.
 - **For the people watching too.** Run it over a finished episode and publish a
   companion page viewers open next to the video, synced to the player.
 
@@ -31,6 +35,9 @@ Status: early, working, rough edges. See [docs/HOW_TO_USE.md](docs/HOW_TO_USE.md
 3. Click the icon on any tab with a video or call. The first time, J-me downloads its
    models in the background, once (about 100 MB for speech, about 1 GB for the brain
    unless the browser has a built-in model or Ollama is running). Then cards appear.
+4. For Zoom, Teams or the room: right-click the icon, open the J-me panel, flip
+   **Microphone**. Settings (which AI, which brain, the microphone permission) are
+   behind ⚙ in that panel.
 
 The brain, in order of preference: **Ollama** on this machine (the 7B model J-me was
 tuned on; see below), the **browser's built-in model** (Chrome 138+, where available),
@@ -91,14 +98,14 @@ audio -> VAD -> on-device speech to text -> rolling transcript
 In the extension, every stage runs in the browser: Silero VAD and Moonshine through
 onnxruntime-web and transformers.js (WebGPU, or wasm on the CPU), the same engine core as
 the Node version, and a brain from the list above. Lookups use Wikipedia and DuckDuckGo's
-Instant Answer API. The Node engine adds Ollama, DuckDuckGo web search, and `--docs DIR`
+Instant Answer API; pictures come from Wikimedia Commons. The Node engine adds Ollama, DuckDuckGo web search, and `--docs DIR`
 to search a folder of your own notes for every item. Design notes in
 [docs/SPEC.md](docs/SPEC.md).
 
 ## Layout
 
 ```
-extension/         Chrome/Edge: toolbar switch, tab-audio ear, on-page overlay
+extension/         Chrome/Edge: toolbar switch, side panel (microphone), settings, on-page overlay
 extension/src/     the in-browser engine (ear, brains, offscreen page), bundled by npm run build:ext
 engine/src/        the core loop (Node + TypeScript, no build step), shared with the extension
 ui/                the queue page (developer install)

@@ -32,7 +32,7 @@ You never speak. You prepare what the people talking are about to want pulled up
 Given the most recent transcript, propose up to N items. Each item is one of:
 - "search": a short web search query (3 to 8 words) for a fact, number, date, article or definition being discussed or disputed.
 - "lookup": a specific named thing (person, company, paper, book, product, place, law) worth having a card for.
-- "prompt": a question for an assistant that needs reasoning over the conversation itself (compare two claims, explain a term in context, summarize the disagreement).
+- "prompt": a question for an AI assistant, phrased as the question: a claim just made that is worth checking ("Is it true that ..."), two claims that conflict, a term used in a way that needs explaining here, or a "what if" someone posed.
 - "media": a specific clip, image, chart, scene or timestamp someone referenced.
 
 Rules:
@@ -40,7 +40,7 @@ Rules:
 - Be concrete. Every item names a specific thing: a person, title, organization, number, date, quote, term, event, law, product or place that was actually said. Nothing generic.
 - Strongly prefer items someone would plausibly say "pull that up" about: a contested fact, a name nobody can quite remember, a statistic, a date, a book or paper, "what was that called", "look that up".
 - Never propose: "clip of <speaker> discussing <topic>", "compare <speaker>'s views with ...", "summarize what <speaker> said", "history of <broad topic>", "context for ...". Those are filler. A "media" item exists only when a specific clip, scene, chart, photo or timestamp was referenced by the speakers.
-- A "prompt" item is rare: only when two concrete claims in the transcript conflict, or a term was used that needs explaining in this context.
+- A "prompt" item names the claim it checks ("Is it true that the Antikythera mechanism predicted eclipses?"), never "fact-check this" or "explain the discussion". One per call at most.
 - Do not repeat anything already in the queue (given). Do not propose near-duplicates.
 - "why" is one short clause quoting or paraphrasing the moment that earned the item.
 - confidence is 0 to 1: how likely someone wants it within the next minute. Reserve 0.8+ for things that were named explicitly and matter to the point being made.
@@ -89,15 +89,16 @@ export async function answerPrompt(opts: AnticipatorOptions, prompt: string, win
   return raw.trim();
 }
 
+const QUESTION = /\?\s*$|^(is|are|was|were|does|do|did|can|could|would|should|what|why|how|who|when|where|which)\b/i;
 const FILLER = /^(history of|context (for|of|about)|overview of|background (on|of)|clip (of|from)|wikipedia page|compare |comparison of|summar(y|ize)|explain (how|why|the)|discussion (of|about)|the (role|impact|importance|significance) of)/i;
 
 /**
  * Small local models love generic "compare X's views" and "clip of Y discussing Z" items.
- * The prompt forbids them; this is the backstop. Prompts need high confidence to get through.
+ * The prompt forbids them; this is the backstop. A prompt must read as a question.
  */
 export function isFiller(kind: Candidate['kind'], text: string, confidence: number): boolean {
   if (FILLER.test(text.trim())) return true;
-  if (kind === 'prompt' && confidence < 0.85) return true;
+  if (kind === 'prompt' && (confidence < 0.6 || !QUESTION.test(text))) return true;
   if (kind === 'media' && confidence < 0.8) return true;
   return false;
 }
@@ -130,6 +131,8 @@ export function parseCandidates(raw: string, max: number): Candidate[] {
     const kind = typeof o.kind === 'string' && kinds.has(o.kind) ? (o.kind as Candidate['kind']) : 'search';
     const conf = Math.max(0, Math.min(1, typeof o.confidence === 'number' ? o.confidence : Number(o.confidence) || 0.5));
     if (isFiller(kind, text, conf)) continue;
+    // One question per call: small brains hand back three near-identical ones otherwise.
+    if (kind === 'prompt' && out.some((c) => c.kind === 'prompt')) continue;
     out.push({ kind, text, why: typeof o.why === 'string' ? o.why : '', confidence: conf });
     if (out.length >= max) break;
   }

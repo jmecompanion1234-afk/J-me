@@ -113,6 +113,8 @@ async function loadEar(prefer: 'auto' | 'wasm'): Promise<void> {
 
 interface StartMessage {
   streamId?: string;
+  /** the microphone: a call in another app, or the room */
+  mic?: boolean;
   /** test path: a URL of a wav or mp3 to play through the ear instead of a tab */
   file?: string;
   brain?: Partial<BrainOptions>;
@@ -127,6 +129,7 @@ async function start(m: StartMessage): Promise<void> {
   ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
   void ctx.resume().catch(() => {});
   let src: AudioNode;
+  let playback = true;
   if (m.streamId) {
     stream = await navigator.mediaDevices.getUserMedia({
       audio: { mandatory: { chromeMediaSource: 'tab', chromeMediaSourceId: m.streamId } } as unknown as MediaTrackConstraints,
@@ -136,6 +139,28 @@ async function start(m: StartMessage): Promise<void> {
     const track = stream.getAudioTracks()[0];
     if (track) track.onended = () => {
       status('the tab stopped sharing audio');
+      void stop();
+      tell({ type: 'stopped' });
+    };
+  } else if (m.mic) {
+    // Echo cancellation off on purpose: the far end of a call comes through the speakers, and the
+    // ear should hear both sides. Permission is granted once on the settings page (an offscreen
+    // document cannot ask).
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: true },
+        video: false,
+      });
+    } catch (e) {
+      const name = e && typeof e === 'object' && 'name' in e ? String((e as { name: string }).name) : '';
+      if (name === 'NotAllowedError' || name === 'SecurityError') throw new Error('microphone not allowed: open the J-me settings page and allow it once');
+      throw e;
+    }
+    src = ctx.createMediaStreamSource(stream);
+    playback = false; // the room must not hear itself
+    const track = stream.getAudioTracks()[0];
+    if (track) track.onended = () => {
+      status('the microphone stopped');
       void stop();
       tell({ type: 'stopped' });
     };
@@ -151,13 +176,16 @@ async function start(m: StartMessage): Promise<void> {
   } else {
     throw new Error('nothing to listen to');
   }
-  src.connect(ctx.destination);
-  engine = new Engine({ mode: 'media', fetchWeb: true, answerPrompts: true, search: browserSearch });
+  if (playback) src.connect(ctx.destination);
+  const mode = m.mic ? 'room' : 'media';
+  engine = new Engine({ mode, fetchWeb: true, answerPrompts: true, search: browserSearch });
   engine.on(event);
-  event({ type: 'hello', mode: 'media', sessionId: new Date().toISOString(), now: 0 });
+  event({ type: 'hello', mode, sessionId: new Date().toISOString(), now: 0 });
   await prepare(m.brain ?? {});
   if (!engine) return; // stopped while loading
   engine.anticipator.opts.chat = brain!.chat;
+  // Only a fast brain answers prompts itself; the others leave it to the "Ask your AI" button.
+  (engine.opts as { answerPrompts: boolean }).answerPrompts = brain!.kind === 'ollama';
   if (ear) ear.flush();
   await ctx.audioWorklet.addModule('worklet.js');
   const node = new AudioWorkletNode(ctx, 'pcm-forwarder');

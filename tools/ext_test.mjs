@@ -1,7 +1,10 @@
 // Drive the extension in a real Chrome and play a speech file through it, end to end:
 // ear (VAD + Moonshine in the browser) -> engine -> brain -> queue. Prints what happens.
 //
-//   node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR]
+//   node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR] [--mic]
+//
+// --mic feeds the file through Chrome's fake microphone instead (the side panel's switch path):
+// permission is auto-granted, the panel page is opened in a tab and its cards are counted.
 //
 // Branded Chrome (137+) ignores --load-extension, so this runs Playwright's Chromium, which has no
 // built-in model: --brain builtin is checked by hand in Chrome. Tab capture needs a real click on the toolbar icon, which no automation can do, so the
@@ -18,6 +21,7 @@ const opt = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 ? args[i
 if (!file) { console.error('usage: node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR]'); process.exit(2); }
 const brainOrder = opt('brain', '') ? [opt('brain')] : undefined;
 const seconds = Number(opt('seconds', 0));
+const mic = args.includes('--mic');
 const profile = opt('profile', path.join(os.tmpdir(), 'jme-ext-test-profile'));
 const EXT = path.resolve('extension');
 
@@ -29,7 +33,8 @@ const url = `http://127.0.0.1:${server.address().port}/${path.basename(file)}`;
 
 const ctx = await chromium.launchPersistentContext(profile, {
   headless: false,
-  args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, '--autoplay-policy=no-user-gesture-required'],
+  args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, '--autoplay-policy=no-user-gesture-required',
+    ...(mic ? ['--use-fake-device-for-media-capture', '--use-fake-ui-for-media-stream', `--use-file-for-fake-audio-capture=${path.resolve(file)}%noloop`] : [])],
   viewport: { width: 1100, height: 700 },
 });
 let sw = ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent('serviceworker'));
@@ -57,7 +62,7 @@ const pump = async () => {
   for (const ev of evs) {
     if (ev.type === 'status') console.log(`${since()}  · ${ev.text}`);
     else if (ev.type === 'segment') console.log(`${since()}  [${ev.segment.t0.toFixed(0)}-${ev.segment.t1.toFixed(0)}s] ${ev.segment.text}`);
-    else if (ev.type === 'item' && ev.change !== 'touched') console.log(`${since()}  ${ev.change.padEnd(7)} ${ev.item.kind.padEnd(6)} ${ev.item.text}  (${ev.item.score.toFixed(2)}${ev.item.results ? `, ${ev.item.results.length} results` : ''})`);
+    else if (ev.type === 'item' && ev.change !== 'touched') console.log(`${since()}  ${ev.change.padEnd(7)} ${ev.item.kind.padEnd(6)} ${ev.item.text}  (${ev.item.score.toFixed(2)}${ev.item.results ? `, ${ev.item.results.length} results` : ''}${ev.item.images && ev.item.images.length ? `, ${ev.item.images.length} pictures` : ''})`);
     else if (ev.type === 'error') console.log(`${since()}  ! ${ev.text}`);
     else if (ev.type === 'hello') console.log(`${since()}  hello`);
     if (ev.type === 'status' && ev.text === 'file finished') done = true;
@@ -71,15 +76,32 @@ await pump();
 console.log('prepared:', JSON.stringify(prep));
 if (!prep || !prep.ok) { clearInterval(pumping); await ctx.close(); server.close(); process.exit(1); }
 
-const r = await send({ type: 'start', file: url, brain: brainOrder ? { order: brainOrder } : {} });
-console.log('start:', JSON.stringify(r));
+let panel = null;
+if (mic) {
+  panel = await ctx.newPage();
+  await panel.goto(sw.url().replace(/sw\.js$/, 'panel.html'));
+  panel.on('pageerror', (e) => console.log('panel page error:', e.message));
+  await panel.click('#mic'); // the real switch: panel -> sw.startMic -> offscreen getUserMedia
+  await new Promise((r) => setTimeout(r, 1500));
+  console.log('panel says:', await panel.evaluate(() => document.getElementById('state').textContent));
+} else {
+  const r = await send({ type: 'start', file: url, brain: brainOrder ? { order: brainOrder } : {} });
+  console.log('start:', JSON.stringify(r));
+}
 const deadline = Date.now() + (seconds ? seconds * 1000 : 20 * 60 * 1000);
 while (!done && Date.now() < deadline) await new Promise((r) => setTimeout(r, 1000));
 clearInterval(pumping);
 const d = await send({ type: 'drain' });
 await pump();
 console.log(`\nsegments: ${d.segments.length}, live items: ${d.items.length}, expired: ${d.history.length}`);
-for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(6)} ${it.text}  score ${it.score.toFixed(2)}${it.results ? `, ${it.results.length} results` : ''}`);
+for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(6)} ${it.text}  score ${it.score.toFixed(2)}${it.results ? `, ${it.results.length} results` : ''}${it.images && it.images.length ? `, ${it.images.length} pictures` : ''}`);
+if (panel) {
+  const seen = await panel.evaluate(() => {
+    const root = document.getElementById('jme-overlay').shadowRoot;
+    return { cards: root.querySelectorAll('.card').length, prompts: root.querySelectorAll('.card.prompt').length, pictures: root.querySelectorAll('.imgs img').length, status: root.querySelector('.st').textContent, state: document.getElementById('state').textContent };
+  });
+  console.log('side panel shows:', JSON.stringify(seen));
+}
 await send({ type: 'stop' });
 await ctx.close();
 server.close();

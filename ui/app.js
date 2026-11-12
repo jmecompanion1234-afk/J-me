@@ -1,7 +1,25 @@
 // J-me Phase A front end: plain ES module, no build step.
 const $ = (id) => document.getElementById(id);
 const queueEl = $('queue'), panel = $('panel'), panelBody = $('panel-body'), statusEl = $('status'), trEl = $('transcript');
-const sourceEl = $('source'), listenEl = $('listen'), floatBtn = $('float'), homeEl = $('home'), askText = $('ask-text');
+const sourceEl = $('source'), listenEl = $('listen'), floatBtn = $('float'), homeEl = $('home'), askText = $('ask-text'), imagesEl = $('images');
+
+// The AI a card hands off to (the same choice the companion page remembers).
+const SERVICES = { chatgpt: ['ChatGPT', (p) => 'https://chatgpt.com/?q=' + p], claude: ['Claude', (p) => 'https://claude.ai/new?q=' + p], perplexity: ['Perplexity', (p) => 'https://www.perplexity.ai/search?q=' + p] };
+let svc = 'chatgpt';
+try { svc = SERVICES[localStorage.getItem('jme:svc')] ? localStorage.getItem('jme:svc') : 'chatgpt'; } catch {}
+const promptFor = (it) => {
+  const moment = (it.anchor && it.anchor.text ? it.anchor.text : '').replace(/\s+/g, ' ').slice(0, 240);
+  const ctx = moment ? `\n\nContext, from a conversation I am listening to: "${moment}"` : '';
+  return it.kind === 'prompt' ? it.text + ctx : `${it.text}\n\nWhat should I know about this?` + ctx;
+};
+const handoff = (it) => `<div class="hand"><a class="ai" href="${esc(SERVICES[svc][1](encodeURIComponent(promptFor(it))))}" target="_blank" rel="noopener">Ask ${SERVICES[svc][0]} ↗</a><select id="svc">${Object.entries(SERVICES).map(([k, v]) => `<option value="${k}"${k === svc ? ' selected' : ''}>${v[0]}</option>`).join('')}</select></div>`;
+
+function renderImages() {
+  const seen = new Set(); const pics = [];
+  for (const it of [...items].sort((a, b) => b.born - a.born)) for (const im of it.images || []) { if (seen.has(im.thumb) || pics.length >= 16) continue; seen.add(im.thumb); pics.push(im); }
+  imagesEl.classList.toggle('on', pics.length > 0);
+  imagesEl.innerHTML = pics.map((p) => `<a href="${esc(p.page)}" target="_blank" rel="noopener" title="${esc(p.title)}"><img src="${esc(p.thumb)}" alt="${esc(p.title)}" referrerpolicy="no-referrer" loading="lazy"></a>`).join('');
+}
 
 let ws, audioCtx, stream, micStream, workletNode, items = [], openId = null;
 
@@ -27,11 +45,12 @@ function handle(ev) {
 function setStatus(t) { statusEl.textContent = t; }
 
 function renderQueue() {
+  renderImages();
   queueEl.innerHTML = '';
   if (!items.length) { queueEl.innerHTML = '<div class="empty">Listening builds the queue. Nothing staged yet.</div>'; return; }
   for (const it of items) {
     const card = document.createElement('div');
-    card.className = 'card' + (it.state === 'pinned' ? ' pinned' : '');
+    card.className = 'card' + (it.state === 'pinned' ? ' pinned' : '') + (it.kind === 'prompt' ? ' prompt' : '');
     card.style.opacity = (0.35 + 0.65 * it.score).toFixed(2);
     card.innerHTML =
       `<div class="text">${esc(it.text)}</div>` +
@@ -53,7 +72,7 @@ function refreshPanel() {
 function showItem(it) {
   openId = it.id;
   panel.classList.remove('hidden');
-  let html = `<h2>${esc(it.text)}</h2><div class="why">${esc(it.why || '')} · ${it.kind} · ${it.state}</div>`;
+  let html = `<h2>${esc(it.text)}</h2><div class="why">${esc(it.why || '')} · ${it.kind} · ${it.state}</div>` + handoff(it);
   if (it.answer) html += `<div class="answer">${esc(it.answer)}</div>`;
   if (it.results && it.results.length) {
     for (const r of it.results) {
@@ -64,6 +83,8 @@ function showItem(it) {
   else if (!it.answer) html += `<p class="why">No results.</p>`;
   html += `<div class="anchor">“${esc(it.anchor?.text || '')}”</div>`;
   panelBody.innerHTML = html;
+  const sel = panelBody.querySelector('#svc');
+  if (sel) sel.onchange = () => { svc = sel.value; try { localStorage.setItem('jme:svc', svc); } catch {} showItem(it); };
 }
 $('close').onclick = () => { panel.classList.add('hidden'); openId = null; panelBody.innerHTML = ''; };
 

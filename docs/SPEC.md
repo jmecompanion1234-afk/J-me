@@ -221,6 +221,25 @@ whatever media is chosen. What that means for each shape:
   cannot share the adapter, so speech runs on wasm when WebLLM is the brain; the search
   engine's HTML page refuses extension requests, so browser lookups use Wikipedia and the
   DuckDuckGo Instant Answer API. The Node engine remains the bigger-brain path.
+- **Three asks from the first hand test (built 2026-11-11, v0.3.0).** The maintainer, after the
+  extension ran in his Chrome: "could it bring up ai inquiry prompts? so you hit the
+  prompt link and it asks your ai"; "a microphone toggle for zoom calls. so you could
+  fact check yourself"; "along with internet searches it should have an image search. so
+  it shows like a stream of images based on the conversation." Built as: (1) prompt
+  items are no longer gated to near-certainty; a prompt must read as a question, one per
+  brain call, and every card carries an "Ask <AI>" link (ChatGPT, Claude or Perplexity,
+  chosen on the settings page) that opens the item with the anchoring moment as context;
+  prompt cards lead with it, and only a fast brain (Ollama) also answers them locally.
+  (2) Pictures: `ImageResult` on items, fetched at stage time with the links (Wikimedia
+  Commons search plus the Wikipedia card's lead image), shown as a strip across the top
+  of the panel, newest item first, each linking to its page. (3) The microphone: a side
+  panel (`panel.html`) with a Microphone switch; the toolbar icon stays "this tab" (one
+  source at a time). Echo cancellation is off on purpose so a desktop Zoom call's far end,
+  coming out of the speakers, is heard too. The permission is granted once on the
+  settings page because an offscreen document cannot ask. Room mode (tau 90) for the mic.
+  Tested on the laptop's real microphone with the demo played through the speakers: cards
+  and a picture reached the side panel; transcription through air is rougher than tab
+  capture, as expected.
 - **Desktop app (Phase B, Tauri).** The switch lives in the tray; on means "everything
   playing on this machine" through system-audio loopback, so any player or meeting app
   works without a browser. The engine installs once with the app and starts with it.

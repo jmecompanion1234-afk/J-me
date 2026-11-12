@@ -6,6 +6,11 @@ on. Anything still in the queue is one tap away, with the links already fetched.
 
 There are three ways to switch it on. The first needs nothing installed but the extension.
 
+Every card carries three things: the web links, an **Ask ChatGPT** (or Claude, or
+Perplexity) button that opens the question in your own AI with the moment baked in, and
+the pictures that feed the strip across the top of the panel. Purple-edged cards are
+questions the talk raised, for your AI rather than a search.
+
 ## 1. The browser switch (the one to use)
 
 Works in Chrome and Edge, on any tab: YouTube, a podcast site, a web call. Everything
@@ -34,6 +39,17 @@ Then, every time:
 
 The tab keeps playing out loud the whole time.
 
+**A call in another app, or the room: the microphone.** Right-click the J-me icon and
+choose **Open the J-me panel**. The side panel has a **Microphone** switch; flip it and
+J-me listens to the mic instead of a tab, with the cards in the panel. For Zoom or Teams
+on the desktop this hears you directly and the others through your speakers, so you can
+check yourself as you go. Chrome asks for the microphone once, on the settings page (⚙
+in the panel, or the extension's Options). The panel also shows the cards while a tab is
+being listened to, if you prefer it to the overlay.
+
+**Settings** (⚙ in the panel): which AI the cards hand off to, the microphone
+permission, and which brain to use.
+
 **Which brain.** J-me picks the best brain it can find, in this order:
 
 1. **Ollama on this machine**, when it is running with a model pulled (the developer
@@ -44,12 +60,11 @@ The tab keeps playing out loud the whole time.
    through WebGPU). The fallback that works anywhere with WebGPU. Slower and simpler
    than the others: expect cards 15 to 40 seconds behind the talk.
 
-To force one, open the extension's service worker console (chrome://extensions →
-J-me → "service worker") and run, for example,
-`chrome.storage.local.set({ brainOrder: ['webllm'] })`. (A settings page is coming.)
+To force one, pick it on the settings page.
 
 **Web lookups in the browser** use Wikipedia and DuckDuckGo's Instant Answer API, both
-open. The developer install also runs full web searches.
+open; **pictures** come from Wikimedia Commons and the Wikipedia article's own image.
+The developer install also runs full web searches.
 
 ## 2. The page switch (any source, including the room; needs the developer install)
 
@@ -112,5 +127,9 @@ video. Review mode on that page lets the host drop or keep items and export the 
   plus the brain's thinking time (a second with Ollama on a GPU, up to 40 with the
   in-browser model). Check the status line in the panel.
 - **The badge shows "!"** after a click: hover the icon, the tooltip says why.
+- **"microphone not allowed".** Open the settings page (⚙ in the panel) and press
+  *Allow the microphone*. Chrome remembers it.
+- **No pictures for a card.** Wikimedia had nothing for that phrase. Named things and
+  places get pictures; abstract questions mostly do not.
 - **Odd cards** (a sung rhythm taken as a title, a name misheard): the model heard it
   that way. Star what matters, let the rest fade.

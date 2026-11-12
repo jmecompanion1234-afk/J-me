@@ -27,6 +27,11 @@ patent.
 - [x] Real tab capture works in the maintainer's Chrome 157 (2026-11-11, after two fixes only a real
       click could find: no `chrome.storage` in an offscreen document, and the tab stream
       must be taken before the models load). The brain was Ollama because it was running.
+- [ ] Release `v0.3.0` (2026-11-11): prompt cards with the "Ask your AI" hand-off, the
+      picture strip, the side panel with the microphone switch, the settings page.
+      the maintainer's test in his Chrome: a Zoom call with the microphone on, and whether the
+      pictures load on YouTube (a page's own content policy can block images drawn by
+      the overlay; the side panel never has that problem).
 - [ ] the maintainer tests the built-in Chrome brain by hand (quit Ollama first, or set
       `brainOrder` to `['builtin']`); the harness cannot, branded Chrome ignores
       unpacked extensions from the command line.

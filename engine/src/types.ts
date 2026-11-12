@@ -23,6 +23,17 @@ export interface SearchResult {
   snippet: string;
   /** which provider produced it: 'web' or 'docs' */
   source: string;
+  /** a picture that goes with it (Wikipedia lead image), when the provider has one */
+  image?: { thumb: string; url: string };
+}
+
+/** A picture for the image strip: a thumbnail, the full file, and the page that credits it. */
+export interface ImageResult {
+  title: string;
+  thumb: string;
+  url: string;
+  page: string;
+  source: string;
 }
 
 export interface QueueItem {
@@ -45,6 +56,8 @@ export interface QueueItem {
   died?: number;
   peak: number;
   results?: SearchResult[];
+  /** pictures for the strip, fetched with the results */
+  images?: ImageResult[];
   /** prompt answers and summaries land here */
   answer?: string;
   /** which providers answered */

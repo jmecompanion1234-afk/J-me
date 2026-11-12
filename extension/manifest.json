@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "J-me",
-  "version": "0.2.0",
-  "description": "A switch on any tab: J-me listens to the video or call playing there and keeps the searches and prompts it is about to need, as an overlay on the page. Everything runs in the browser.",
+  "version": "0.3.0",
+  "description": "A switch on any tab, or on the microphone: J-me listens and keeps the searches, pictures and questions the talk is about to need, with a hand-off to your own AI. Everything runs in the browser.",
   "minimum_chrome_version": "128",
   "action": {
     "default_title": "J-me: listen to this tab"
@@ -15,13 +15,22 @@
   "background": {
     "service_worker": "sw.js"
   },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
   "permissions": [
     "tabCapture",
     "offscreen",
     "scripting",
     "activeTab",
     "declarativeNetRequest",
-    "storage"
+    "storage",
+    "sidePanel",
+    "contextMenus"
   ],
   "host_permissions": [
     "https://html.duckduckgo.com/*",

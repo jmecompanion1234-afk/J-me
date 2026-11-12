@@ -1,10 +1,11 @@
-import type { DecayParams, EngineEvent, ItemKind, Mode, QueueItem, SearchResult, TranscriptSegment } from './types.ts';
+import type { DecayParams, EngineEvent, ImageResult, ItemKind, Mode, QueueItem, SearchResult, TranscriptSegment } from './types.ts';
 import { DEFAULT_DECAY } from './types.ts';
 import { Transcript } from './transcript.ts';
 import { Queue } from './queue.ts';
 import { Anticipator, answerPrompt, DEFAULT_ANTICIPATOR, type AnticipatorOptions } from './anticipator.ts';
 import { webSearch } from './providers/web.ts';
 import { wikiLookup } from './providers/wiki.ts';
+import { commonsImages } from './providers/images.ts';
 import type { LocalDocs } from './providers/localdocs.ts';
 
 export interface EngineOptions {
@@ -22,9 +23,15 @@ export interface EngineOptions {
   docs?: LocalDocs;
   /** the web lookup for a staged item; default: Wikipedia card for lookups plus a DuckDuckGo search */
   search?: SearchFn;
+  /** pictures for the image strip, fetched with the results (off in a dry backtest) */
+  fetchImages: boolean;
+  /** the image lookup; default: Wikimedia Commons */
+  images?: ImageFn;
 }
 
 export type SearchFn = (query: string, kind: ItemKind) => Promise<SearchResult[]>;
+export type ImageFn = (query: string, kind: ItemKind) => Promise<ImageResult[]>;
+export const defaultImages: ImageFn = (query) => commonsImages(query, 4);
 
 /** The Node default. A named thing gets its Wikipedia card first; everything gets the web.
  *  Either may fail (offline, a search engine challenge): the other still answers. */
@@ -47,6 +54,7 @@ export const DEFAULT_ENGINE: EngineOptions = {
   anticipateEvery: 15,
   fetchWeb: true,
   answerPrompts: true,
+  fetchImages: true,
 };
 
 /**
@@ -125,7 +133,7 @@ export class Engine {
       this.stats.anticipatorCalls++;
       this.stats.anticipatorMs += Date.now() - t0;
       this.stats.candidates += cands.length;
-      this.status(`brain: ${cands.length} candidate${cands.length === 1 ? '' : 's'} in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+      this.status(`thought of ${cands.length} idea${cands.length === 1 ? '' : 's'} in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
       // Anchor on the last ~20 s: that is the moment that earned the items.
       const anchor = window.filter((s) => s.t1 >= at - 20);
       this.queue.admit(cands, anchor.length ? anchor : window, at);
@@ -147,19 +155,35 @@ export class Engine {
             sources.push('docs');
           }
         }
-        if (item.kind === 'prompt') {
-          if (this.opts.answerPrompts) {
+        // A prompt is answered by the local brain (when allowed) AND searched, so the card has
+        // links even where the brain is slow; the "ask your AI" button needs nothing fetched.
+        const jobs: Promise<void>[] = [];
+        if (item.kind === 'prompt' && this.opts.answerPrompts) {
+          jobs.push((async () => {
             item.answer = await answerPrompt(this.anticipator.opts, item.text, this.transcript.windowText(this.now, 180));
             sources.push('local-llm');
-          }
-        } else if (this.opts.fetchWeb) {
-          this.stats.fetches++;
-          const found = await (this.opts.search ?? defaultSearch)(item.text, item.kind);
-          results.push(...found);
-          for (const r of found) if (!sources.includes(r.source)) sources.push(r.source);
+          })());
         }
+        if (this.opts.fetchWeb) {
+          this.stats.fetches++;
+          jobs.push((async () => {
+            const found = await (this.opts.search ?? defaultSearch)(item.text, item.kind);
+            results.push(...found);
+            for (const r of found) if (!sources.includes(r.source)) sources.push(r.source);
+          })());
+        }
+        const images: ImageResult[] = [];
+        if (this.opts.fetchImages && this.opts.fetchWeb && item.kind !== 'prompt') {
+          jobs.push((this.opts.images ?? defaultImages)(item.text, item.kind).then((found) => { images.push(...found); }, () => {}));
+        }
+        const settled = await Promise.allSettled(jobs);
+        // The Wikipedia card's own picture leads the strip when there is one.
+        for (const r of results) if (r.image && !images.some((i) => i.url === r.image!.url)) images.unshift({ title: r.title, thumb: r.image.thumb, url: r.image.url, page: r.url, source: r.source });
         item.results = results;
+        item.images = images;
         item.sources = sources;
+        const failed = settled.find((x): x is PromiseRejectedResult => x.status === 'rejected');
+        if (failed && !results.length && !item.answer) throw failed.reason;
       } catch (e) {
         this.emit({ type: 'error', now: this.now, text: `stage "${item.text}": ${e instanceof Error ? e.message : String(e)}` });
         item.results = results;

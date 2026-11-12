@@ -21,13 +21,14 @@ export async function wikiLookup(query: string, max = 2, timeoutMs = 8_000, lang
         headers: { accept: 'application/json' },
       });
       if (!r.ok) continue;
-      const s = (await r.json()) as { title?: string; extract?: string; content_urls?: { desktop?: { page?: string } }; type?: string };
+      const s = (await r.json()) as { title?: string; extract?: string; content_urls?: { desktop?: { page?: string } }; type?: string; thumbnail?: { source: string }; originalimage?: { source: string } };
       if (s.type === 'disambiguation') continue;
       out.push({
         title: s.title ?? title,
         url: s.content_urls?.desktop?.page ?? `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`,
         snippet: (s.extract ?? '').replace(/\s+/g, ' ').slice(0, 300),
         source: 'wikipedia',
+        ...(s.thumbnail?.source ? { image: { thumb: s.thumbnail.source, url: s.originalimage?.source ?? s.thumbnail.source } } : {}),
       });
     }
     return out;
