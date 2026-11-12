@@ -42,6 +42,7 @@ id expires in seconds, so the stream is taken before the models load.
 engine/src/        the core loop: transcript, anticipator (the brain prompt), queue (decay), providers
 extension/src/     the in-browser ear (VAD + Moonshine), the brains (Ollama, built-in, WebLLM), frontier.ts
 extension/         sw.js (the switches), overlay.js (the panel, both modes), panel/options pages
+engine/src/bridge.ts, mcp.ts   the local agent bridge and the MCP server on top of it (docs/AGENTS.md)
 docs/SPEC.md       the design and its history; docs/NEXT.md what is planned
 ```
 

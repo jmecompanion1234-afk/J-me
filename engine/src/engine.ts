@@ -240,8 +240,8 @@ export class Engine {
   }
 
   /** A typed or spoken question from the operator: jumps the queue, pinned. */
-  ask(text: string): QueueItem | undefined {
-    const [item] = this.queue.admit([{ kind: 'prompt', text, why: 'asked by the operator', confidence: 1 }], this.transcript.window(this.now, 20), this.now);
+  ask(text: string, by = 'the operator'): QueueItem | undefined {
+    const [item] = this.queue.admit([{ kind: 'prompt', text, why: `asked by ${by}`, confidence: 1 }], this.transcript.window(this.now, 20), this.now);
     if (item) {
       this.queue.pin(item.id, this.now);
       this.stage(item);

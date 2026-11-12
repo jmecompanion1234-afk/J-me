@@ -24,6 +24,10 @@ show: nobody asks him to prepare, but when someone says "pull that up," it is up
   Every card also hands off to ChatGPT, Claude or Perplexity in your own account.
 - **For the people watching too.** Run it over a finished episode and publish a
   companion page viewers open next to the video, synced to the player.
+- **For your agents.** Switch on "share with a local agent" and `node engine/src/mcp.ts`
+  is an MCP server (Claude Code, Codex, Cursor, Cortext): the live cards, the transcript,
+  ask, pin, pause, wait for the next card. Nothing leaves the machine. See
+  [docs/AGENTS.md](docs/AGENTS.md).
 
 Status: early, working, rough edges. See [docs/HOW_TO_USE.md](docs/HOW_TO_USE.md).
 
@@ -115,7 +119,7 @@ ui/                the queue page (developer install)
 scripts/           setup (models + Ollama) and the extension build
 tools/             caption fetcher, extension test harness (Playwright)
 samples/           a short transcript to try the backtest on
-docs/              how to use, the design spec, the launch notes
+docs/              how to use, the design spec, the launch notes, AGENTS.md (the bridge + MCP)
 ```
 
 Developing the extension: `npm install`, edit under `extension/src/` or `engine/src/`,

@@ -13,6 +13,7 @@
   select { font: inherit; background: #0f1115; color: #e8e8ec; border: 1px solid #262a33; border-radius: 6px; padding: 6px 8px; }
   button { font: inherit; background: #f2b84b; color: #111; border: 0; border-radius: 6px; padding: 7px 12px; font-weight: 600; cursor: pointer; }
   #micstate { margin-left: 10px; color: #8a8f9c; font-size: 13px; }
+  code { background: #0f1115; padding: 1px 5px; border-radius: 4px; }
   .ok { color: #7bd88f; } .bad { color: #f27b7b; }
 </style>
 </head>
@@ -43,6 +44,13 @@
     <label>Model <input type="text" id="fmodel" placeholder="default for the provider"></label>
     <label id="furlrow">Base URL <input type="text" id="furl" placeholder="http://127.0.0.1:11434/v1"></label>
     <p id="fnote"></p>
+  </section>
+
+  <section>
+    <h2>Share with a local agent (optional)</h2>
+    <p>Sends the transcript and the cards to a small program on this machine, so your own agents can read them and ask questions into the queue. Run <code>node engine/src/mcp.ts</code> from the J-me folder; it is an MCP server for Claude Code, Codex, Cursor or Cortext. Nothing leaves the machine. See docs/AGENTS.md.</p>
+    <label><input type="checkbox" id="bridgeon"> Share with a local agent</label>
+    <label>Bridge address <input type="text" id="bridgeurl" placeholder="http://127.0.0.1:8788"></label>
   </section>
 
   <section>

@@ -12,6 +12,18 @@ async function ensureOffscreen() {
   });
 }
 
+/** The agent bridge URL when "share with a local agent" is on, else null. */
+async function bridgeUrl() {
+  const { bridge } = await chrome.storage.local.get('bridge');
+  return bridge && bridge.on ? (bridge.url || 'http://127.0.0.1:8788') : null;
+}
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area === 'local' && ch.bridge) {
+    const b = ch.bridge.newValue;
+    chrome.runtime.sendMessage({ target: 'offscreen', type: 'bridge', url: b && b.on ? (b.url || 'http://127.0.0.1:8788') : null }).catch(() => {});
+  }
+});
+
 /** The brain preference, when one is stored (chrome.storage.local.brainOrder, e.g. ["webllm"]). */
 async function brainPrefs() {
   const { brainOrder } = await chrome.storage.local.get('brainOrder');
@@ -48,7 +60,7 @@ async function startTab(tab, panelOpened) {
   const page = await readPage(tab);
   chrome.action.setBadgeText({ text: '…', tabId: tab.id });
   chrome.action.setBadgeBackgroundColor({ color: '#f2b84b', tabId: tab.id });
-  const r = await send({ type: 'start', streamId, title: tab.title, page, brain: await brainPrefs() });
+  const r = await send({ type: 'start', streamId, title: tab.title, page, brain: await brainPrefs(), bridge: await bridgeUrl() });
   if (r && r.ok === false) throw new Error(r.error || 'could not start');
   chrome.action.setBadgeText({ text: 'ON', tabId: tab.id });
   chrome.action.setTitle({ title: 'J-me: listening to this tab (click to stop)', tabId: tab.id });
@@ -101,7 +113,7 @@ async function startMic() {
   source = { kind: 'mic' };
   chrome.action.setBadgeText({ text: 'MIC' });
   chrome.action.setBadgeBackgroundColor({ color: '#f2b84b' });
-  const r = await send({ type: 'start', mic: true, brain: await brainPrefs() });
+  const r = await send({ type: 'start', mic: true, brain: await brainPrefs(), bridge: await bridgeUrl() });
   if (r && r.ok === false) throw new Error(r.error || 'could not start');
   chrome.action.setTitle({ title: 'J-me: listening to the microphone (switch off in the side panel)' });
 }

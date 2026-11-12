@@ -272,6 +272,16 @@ whatever media is chosen. What that means for each shape:
   out, only on the press. This is the "frontier on demand" rung of the model ladder made
   concrete. Also 0.4.1: the page's title, author and description become brain context;
   0.4.2: the star toggles off again.
+- **The bridge and the MCP server (v0.6.0, 2026-11-11).** The maintainer: "is there a way agents
+  can use J-me to streamline automations?" then "lets build the bridge and the mcp... agent
+  friendly". `engine/src/bridge.ts`: a local HTTP process the extension feeds every event
+  (setting "share with a local agent"), holding the live cards, the pinned ones and the last
+  hour of transcript; `/state`, `/events` (SSE), `/command` (ask, pin, unpin, pause, resume)
+  and the extension's long-poll `/commands`. `engine/src/mcp.ts`: an MCP server over stdio
+  on top (starts the bridge itself when the port is free): jme_state, jme_cards,
+  jme_transcript, jme_ask, jme_pin, jme_unpin, jme_pause, jme_resume, jme_wait. Agent asks
+  are labelled "asked by <agent>" and capped at six a minute; the pause button stays the
+  human's override. Also 0.5.1 pause/resume with catch-up, 0.5.2 side-panel detection.
 
 The engine stays the same under all four: a text-in / events-out plug-in (section 9a; the
 segment door and its `docs/API.md` are the next build), with the audio ear as one optional

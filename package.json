@@ -1,6 +1,6 @@
 {
   "name": "j-me",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "description": "A local, private 'pull that up' buffer for live conversations: it listens and keeps the searches and prompts the talk is about to need.",
   "license": "MIT",
@@ -13,11 +13,15 @@
     "start": "node engine/src/main.ts",
     "check": "tsc --noEmit -p engine && tsc --noEmit -p extension",
     "build:ext": "node scripts/build-ext.mjs",
-    "test:ext": "node tools/ext_test.mjs"
+    "test:ext": "node tools/ext_test.mjs",
+    "bridge": "node engine/src/bridge.ts",
+    "mcp": "node engine/src/mcp.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "sherpa-onnx-node": "^1.12.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@huggingface/transformers": "^4.3.2",

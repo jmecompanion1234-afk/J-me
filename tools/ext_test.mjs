@@ -1,7 +1,7 @@
 // Drive the extension in a real Chrome and play a speech file through it, end to end:
 // ear (VAD + Moonshine in the browser) -> engine -> brain -> queue. Prints what happens.
 //
-//   node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR] [--mic] [--pause]
+//   node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR] [--mic] [--pause] [--bridge]
 //
 // --mic feeds the file through Chrome's fake microphone instead (the side panel's switch path):
 // permission is auto-granted, the panel page is opened in a tab and its cards are counted.
@@ -10,6 +10,7 @@
 // built-in model: --brain builtin is checked by hand in Chrome. Tab capture needs a real click on the toolbar icon, which no automation can do, so the
 // test plays the file inside the offscreen page instead; the capture path is exercised by hand.
 import { chromium } from 'playwright';
+import { Bridge } from '../engine/src/bridge.ts';
 import http from 'node:http';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -22,6 +23,11 @@ if (!file) { console.error('usage: node tools/ext_test.mjs FILE.wav [--brain oll
 const brainOrder = opt('brain', '') ? [opt('brain')] : undefined;
 const seconds = Number(opt('seconds', 0));
 const mic = args.includes('--mic');
+// --bridge: run the agent bridge in this process, point the extension at it, and at the end
+// read the state back and push an agent ask through it.
+const bridge = args.includes('--bridge') ? new Bridge() : null;
+const bridgePort = bridge ? await bridge.listen(0) : 0;
+if (bridge) console.log(`bridge on http://127.0.0.1:${bridgePort}`);
 const profile = opt('profile', path.join(os.tmpdir(), 'jme-ext-test-profile'));
 const EXT = path.resolve('extension');
 
@@ -88,7 +94,7 @@ if (mic) {
   console.log('panel says:', await panel.evaluate(() => document.getElementById('state').textContent));
 } else {
   const page = { title: 'Two friends on the Antikythera mechanism (demo)', author: 'J-me samples', description: 'A scripted chat about the Antikythera mechanism, the Library of Alexandria and what gets lost.', url: 'https://example.invalid/demo' };
-  const r = await send({ type: 'start', file: url, page, brain: brainOrder ? { order: brainOrder } : {} });
+  const r = await send({ type: 'start', file: url, page, brain: brainOrder ? { order: brainOrder } : {}, ...(bridge ? { bridge: `http://127.0.0.1:${bridgePort}` } : {}) });
   console.log('start:', JSON.stringify(r));
 }
 const deadline = Date.now() + (seconds ? seconds * 1000 : 20 * 60 * 1000);
@@ -109,6 +115,14 @@ clearInterval(pumping);
     for (let i = 0; i < 60; i++) { await new Promise((r) => setTimeout(r, 1000)); const s2 = await send({ type: 'drain' }); const it = (s2.items || []).find((i) => i.id === target.id); if (it && it.answer && it.answer !== '…') { console.log(`\nanswer here (${target.kind}: ${target.text}):\n  ${it.answer.replace(/\n/g, ' ').slice(0, 300)}`); break; } }
   }
 }
+if (bridge) {
+  const s = bridge.state;
+  console.log(`\nbridge state: listening=${s.listening} title=${JSON.stringify(s.title)} segments=${s.transcript.length} cards=${s.cards.length} pinned=${s.pinned.length} status=${JSON.stringify(s.status)}`);
+  const r = bridge.command({ type: 'ask', text: 'What is the oldest known geared mechanism?', by: 'harness-agent' });
+  console.log('agent ask ->', JSON.stringify(r));
+  const ev = await new Promise((resolve) => { const off = bridge.on((e) => { if (e.type === 'item' && e.change === 'born' && /oldest known geared/.test(e.item.text)) { off(); resolve(e); } }); setTimeout(() => { off(); resolve(null); }, 15000); });
+  console.log('agent card born:', ev ? `${ev.item.kind} "${ev.item.text}" (${ev.item.why})` : 'NOT SEEN');
+}
 const d = await send({ type: 'drain' });
 await pump();
 console.log(`\nsegments: ${d.segments.length}, live items: ${d.items.length}, expired: ${d.history.length}`);
@@ -127,5 +141,6 @@ for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(
   console.log('side panel shows:', JSON.stringify(seen));
 }
 await send({ type: 'stop' });
+if (bridge) { await new Promise((r) => setTimeout(r, 800)); console.log('bridge after stop: listening=' + bridge.state.listening); bridge.close(); }
 await ctx.close();
 server.close();

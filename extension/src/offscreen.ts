@@ -38,7 +38,7 @@ const clock = () => (Date.now() - started) / 1000;
 configureRuntime(chrome.runtime.getURL('vendor/'));
 
 const tell = (msg: Record<string, unknown>) => chrome.runtime.sendMessage({ target: 'sw', ...msg }).catch(() => {});
-const event = (ev: EngineEvent) => tell({ type: 'event', ev });
+const event = (ev: EngineEvent) => { tell({ type: 'event', ev }); toBridge(ev); };
 const status = (text: string) => event({ type: 'status', now: engine?.now ?? 0, text });
 
 let brainPicking: Promise<Brain> | null = null;
@@ -59,6 +59,61 @@ const where = (e: unknown): string => {
 };
 
 let prepareChain: Promise<void> = Promise.resolve();
+
+// ---- the bridge: every event to a local agent process, and its commands back ----
+// A setting switches it on (the service worker passes the URL; this page has no storage).
+let bridgeUrl: string | null = null;
+let bridgeQueue: EngineEvent[] = [];
+let bridgeTimer: ReturnType<typeof setTimeout> | null = null;
+let bridgePolling = false;
+let bridgeWarned = false;
+function setBridge(url: string | null): void {
+  if (url === bridgeUrl) return;
+  bridgeUrl = url ? url.replace(/\/+$/, '') : null;
+  bridgeWarned = false;
+  if (bridgeUrl && !bridgePolling) void pollBridge();
+}
+function toBridge(ev: EngineEvent): void {
+  if (!bridgeUrl) return;
+  bridgeQueue.push(ev);
+  if (bridgeTimer) return;
+  bridgeTimer = setTimeout(async () => {
+    bridgeTimer = null;
+    const batch = bridgeQueue.splice(0);
+    if (!bridgeUrl || !batch.length) return;
+    try {
+      await fetch(bridgeUrl + '/events', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ events: batch }) });
+      bridgeWarned = false;
+    } catch {
+      if (!bridgeWarned) { bridgeWarned = true; status(`no agent bridge at ${bridgeUrl} (run: node engine/src/mcp.ts)`); }
+    }
+  }, 400);
+}
+async function pollBridge(): Promise<void> {
+  bridgePolling = true;
+  try {
+    while (bridgeUrl) {
+      let cmds: { type: string; text?: string; itemId?: string; by?: string }[] = [];
+      try {
+        const res = await fetch(bridgeUrl + '/commands?wait=25');
+        cmds = (await res.json()) as typeof cmds;
+      } catch {
+        await new Promise((r) => setTimeout(r, 3000));
+        continue;
+      }
+      for (const c of cmds) {
+        if (!engine) continue;
+        if (c.type === 'ask' && c.text) { engine.ask(c.text, c.by || 'an agent'); }
+        else if (c.type === 'pin' && c.itemId) engine.pin(c.itemId);
+        else if (c.type === 'unpin' && c.itemId) engine.unpin(c.itemId);
+        else if (c.type === 'pause') engine.pause();
+        else if (c.type === 'resume') void engine.resume();
+      }
+    }
+  } finally {
+    bridgePolling = false;
+  }
+}
 
 /** Pick the brain, then load the ear to suit it; both stay in memory for the next switch-on.
  *  A request naming a brain order the current brain is not in picks again. Calls are
@@ -119,6 +174,8 @@ interface StartMessage {
   title?: string;
   /** what the page says it is, read in the tab by the service worker */
   page?: { title?: string; author?: string; description?: string; url?: string };
+  /** the agent bridge URL when the setting is on */
+  bridge?: string | null;
   /** test path: a URL of a wav or mp3 to play through the ear instead of a tab */
   file?: string;
   brain?: Partial<BrainOptions>;
@@ -126,6 +183,7 @@ interface StartMessage {
 
 async function start(m: StartMessage): Promise<void> {
   await stop();
+  if ('bridge' in m) setBridge(m.bridge ?? null);
   started = Date.now();
   // Take the tab's audio FIRST: a stream id from chrome.tabCapture is single use and expires
   // within seconds, and the first click may spend minutes downloading models. Playing the stream
@@ -216,7 +274,7 @@ async function stop(): Promise<void> {
   stream = null;
   if (ctx) await ctx.close().catch(() => {});
   ctx = null;
-  if (engine) engine.reset();
+  if (engine) { engine.reset(); event({ type: 'off', now: engine.now }); }
   engine = null;
 }
 
@@ -258,6 +316,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   else if (msg.type === 'stop') stop().then(() => reply({ ok: true }));
   else if (msg.type === 'prepare') prepare((msg as { brain?: Partial<BrainOptions> }).brain ?? {}).then(() => reply({ ok: true, ear: ear?.device, brain: brain?.name }), (e: unknown) => reply({ ok: false, error: errText(e) }));
   else if (msg.type === 'ws') { command(msg.msg as Command); reply({ ok: true }); }
+  else if (msg.type === 'bridge') { setBridge((msg as { url?: string | null }).url ?? null); reply({ ok: true }); }
   else if (msg.type === 'chat') (async () => {
     try {
       const m = msg as { messages?: { role: 'system' | 'user'; content: string }[]; opts?: Record<string, unknown>; text?: string };

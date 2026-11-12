@@ -23,6 +23,12 @@ chrome.storage.local.get('frontier').then((v) => {
   if (f) fnote.textContent = f.provider !== 'custom' && !f.key ? 'Add the key to switch it on.' : `On: ${f.model} at ${f.baseUrl}`;
 });
 
+// The agent bridge.
+const bridgeon = document.getElementById('bridgeon'), bridgeurl = document.getElementById('bridgeurl');
+const saveBridge = () => chrome.storage.local.set({ bridge: { on: bridgeon.checked, url: bridgeurl.value.trim() || 'http://127.0.0.1:8788' } });
+bridgeon.onchange = saveBridge; bridgeurl.onchange = saveBridge;
+chrome.storage.local.get('bridge').then((v) => { if (v.bridge) { bridgeon.checked = !!v.bridge.on; bridgeurl.value = v.bridge.url || ''; } });
+
 const overlay = document.getElementById('overlay');
 overlay.onchange = () => chrome.storage.local.set({ overlayOnPage: overlay.checked });
 chrome.storage.local.get(['aiService', 'brainOrder', 'overlayOnPage']).then((v) => {
