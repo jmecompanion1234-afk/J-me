@@ -35,9 +35,22 @@ let engine: Engine | null = null;
 let ear: Ear | null = null;
 let brain: Brain | null = null;
 let docs: DocIndex | null = null;
+/** The two search switches in the J-me bar. The documents stay loaded either way; the switch decides whether a card searches them. */
+let modes = { docs: true, web: true };
+function applyModes(): void {
+  if (!engine) return;
+  (engine.opts as { fetchWeb: boolean; docs?: DocIndex }).fetchWeb = modes.web;
+  (engine.opts as { fetchWeb: boolean; docs?: DocIndex }).docs = modes.docs && docs ? docs : undefined;
+}
+function setModes(m: { docs?: boolean; web?: boolean }): void {
+  modes = { docs: m.docs !== false, web: m.web !== false };
+  applyModes();
+  const have = docs ? `${docs.names().length} files` : 'none chosen';
+  status(`searching: ${[modes.docs ? `your documents (${have})` : '', modes.web ? 'the web' : ''].filter(Boolean).join(' + ') || 'nothing, both switches off'}`);
+}
 async function reloadDocs(): Promise<void> {
   try { docs = await loadDocIndex(); } catch (e) { docs = null; status('documents: ' + errText(e)); }
-  if (engine) (engine.opts as { docs?: DocIndex }).docs = docs ?? undefined;
+  applyModes();
   if (docs) status(`documents on hand: ${docs.names().length} files, ${docs.size} paragraphs`);
 }
 let ticker: ReturnType<typeof setInterval> | null = null;
@@ -184,6 +197,8 @@ interface StartMessage {
   page?: { title?: string; author?: string; description?: string; url?: string };
   /** the agent bridge URL when the setting is on */
   bridge?: string | null;
+  /** the search switches: your documents, the web */
+  modes?: { docs?: boolean; web?: boolean };
   /** test path: a URL of a wav or mp3 to play through the ear instead of a tab */
   file?: string;
   brain?: Partial<BrainOptions>;
@@ -192,6 +207,7 @@ interface StartMessage {
 async function start(m: StartMessage): Promise<void> {
   await stop();
   if ('bridge' in m) setBridge(m.bridge ?? null);
+  if (m.modes) modes = { docs: m.modes.docs !== false, web: m.modes.web !== false };
   started = Date.now();
   // Take the tab's audio FIRST: a stream id from chrome.tabCapture is single use and expires
   // within seconds, and the first click may spend minutes downloading models. Playing the stream
@@ -253,7 +269,7 @@ async function start(m: StartMessage): Promise<void> {
   const context = [title ? `Title: ${title}` : '', p.author ? `By: ${p.author}` : '', p.description ? `Description: ${p.description}` : '', p.url ? `URL: ${p.url}` : '']
     .filter(Boolean).join('\n');
   await reloadDocs();
-  engine = new Engine({ mode, fetchWeb: true, answerPrompts: true, search: browserSearch, ...(context ? { context } : {}), ...(docs ? { docs } : {}) });
+  engine = new Engine({ mode, fetchWeb: modes.web, answerPrompts: true, search: browserSearch, ...(context ? { context } : {}), ...(modes.docs && docs ? { docs } : {}) });
   engine.on(event);
   event({ type: 'hello', mode, sessionId: new Date().toISOString(), now: 0, ...(title ? { title } : {}) });
   await prepare(m.brain ?? {});
@@ -299,7 +315,9 @@ async function answerHere(id: string, f: FrontierSettings | undefined): Promise<
   engine.setAnswer(id, '…', 'frontier');
   try {
     const question = it.kind === 'prompt' ? it.text : `${it.text}\n\nWhat should I know about this?`;
-    const text = await frontierAnswer(f, question, (it.anchor?.text ?? '').replace(/\s+/g, ' ').slice(0, 300));
+    const fromDocs = (it.results ?? []).filter((r) => r.source === 'docs').slice(0, 3).map((r) => `- ${r.title}: ${(r.snippet || '').slice(0, 240)}`);
+    const asked = fromDocs.length ? `${question}\n\nFrom my own documents (use them when they answer it, and say which):\n${fromDocs.join('\n')}` : question;
+    const text = await frontierAnswer(f, asked, (it.anchor?.text ?? '').replace(/\s+/g, ' ').slice(0, 300));
     engine.setAnswer(id, text || '(no answer)', 'frontier');
   } catch (e) {
     engine.setAnswer(id, 'could not answer: ' + errText(e), 'frontier');
@@ -327,6 +345,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   else if (msg.type === 'ws') { command(msg.msg as Command); reply({ ok: true }); }
   else if (msg.type === 'bridge') { setBridge((msg as { url?: string | null }).url ?? null); reply({ ok: true }); }
   else if (msg.type === 'docs') reloadDocs().then(() => reply({ ok: true, files: docs?.names().length ?? 0 }));
+  else if (msg.type === 'modes') { setModes(msg as { docs?: boolean; web?: boolean }); reply({ ok: true }); }
   else if (msg.type === 'chat') (async () => {
     try {
       const m = msg as { messages?: { role: 'system' | 'user'; content: string }[]; opts?: Record<string, unknown>; text?: string };

@@ -29,7 +29,10 @@ show: nobody asks him to prepare, but when someone says "pull that up," it is up
   companion page viewers open next to the video, synced to the player.
 - **Your own documents.** Point it at a folder (notes, minutes, contracts, specs) and
   every card searches your files before the web, on this machine; the brain knows which
-  documents are on hand and proposes lookups in their terms.
+  documents are on hand and proposes lookups in their terms. Two pills in the J-me bar,
+  **📄 docs** and **🌐 web**, switch each source on and off while it runs: documents only
+  for a private meeting, web only for a podcast, both for a lecture. `samples/docs/` is a
+  small folder to try with the demo transcript.
 - **For your agents.** Switch on "share with a local agent" and `node engine/src/mcp.ts`
   is an MCP server (Claude Code, Codex, Cursor, Cortext): the live cards, the transcript,
   ask, pin, pause, wait for the next card. Nothing leaves the machine. See

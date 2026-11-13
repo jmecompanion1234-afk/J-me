@@ -29,6 +29,14 @@ const saveBridge = () => chrome.storage.local.set({ bridge: { on: bridgeon.check
 bridgeon.onchange = saveBridge; bridgeurl.onchange = saveBridge;
 chrome.storage.local.get('bridge').then((v) => { if (v.bridge) { bridgeon.checked = !!v.bridge.on; bridgeurl.value = v.bridge.url || ''; } });
 
+// The two search switches, shared with the pills in the J-me bar.
+const searchdocs = document.getElementById('searchdocs'), searchweb = document.getElementById('searchweb');
+searchdocs.onchange = () => chrome.storage.local.set({ searchDocs: searchdocs.checked });
+searchweb.onchange = () => chrome.storage.local.set({ searchWeb: searchweb.checked });
+const showSearch = (v) => { searchdocs.checked = v.searchDocs !== false; searchweb.checked = v.searchWeb !== false; };
+chrome.storage.local.get(['searchDocs', 'searchWeb']).then(showSearch);
+chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && (ch.searchDocs || ch.searchWeb)) chrome.storage.local.get(['searchDocs', 'searchWeb']).then(showSearch); });
+
 const besideBox = document.getElementById('beside');
 besideBox.onchange = () => chrome.storage.local.set({ linksBeside: besideBox.checked });
 chrome.storage.local.get('linksBeside').then((v) => { besideBox.checked = v.linksBeside !== false; });

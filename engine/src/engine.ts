@@ -239,7 +239,8 @@ export class Engine {
         }
         if (item.kind === 'prompt' && this.opts.answerPrompts) {
           jobs.push((async () => {
-            item.answer = await answerPrompt(this.anticipator.opts, item.text, this.transcript.windowText(this.now, 180));
+            const fromDocs = results.filter((r) => r.source === 'docs').map((r) => `${r.title}: ${r.snippet}`);
+            item.answer = await answerPrompt(this.anticipator.opts, item.text, this.transcript.windowText(this.now, 180), fromDocs);
             sources.push('local-llm');
           })());
         }

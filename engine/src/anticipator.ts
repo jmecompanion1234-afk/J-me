@@ -76,16 +76,17 @@ export class Anticipator {
 }
 
 /** Answer a "prompt" item over the recent transcript, locally. Plain text, short. */
-export async function answerPrompt(opts: AnticipatorOptions, prompt: string, windowText: string): Promise<string> {
+/** `docs`: paragraphs from the person's own documents that matched the question (title: text), if any. */
+export async function answerPrompt(opts: AnticipatorOptions, prompt: string, windowText: string, docs: string[] = []): Promise<string> {
   const raw = await brainOf(opts)(
     [
       {
         role: 'system',
         content:
-          'You answer a question about a live conversation using only the transcript given and general knowledge. ' +
-          'Four sentences at most. If the transcript does not settle it, say what is known and what is not.',
+          'You answer a question about a live conversation using only the transcript given, the person\'s own documents when some are given, and general knowledge. ' +
+          'Four sentences at most. When a document answers it, say so and name the document. If nothing settles it, say what is known and what is not.',
       },
-      { role: 'user', content: `Transcript:\n"""\n${windowText}\n"""\n\nQuestion: ${prompt}` },
+      { role: 'user', content: `Transcript:\n"""\n${windowText}\n"""\n${docs.length ? `\nFrom the person's own documents:\n${docs.map((d) => '- ' + d).join('\n')}\n` : ''}\nQuestion: ${prompt}` },
     ],
     { temperature: 0.2, maxTokens: 300, timeoutMs: opts.timeoutMs },
   );

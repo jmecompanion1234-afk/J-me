@@ -17,7 +17,13 @@ async function bridgeUrl() {
   const { bridge } = await chrome.storage.local.get('bridge');
   return bridge && bridge.on ? (bridge.url || 'http://127.0.0.1:8788') : null;
 }
+/** The two search switches (the pills in the J-me bar): your documents, the web. Both on by default. */
+async function searchModes() {
+  const v = await chrome.storage.local.get(['searchDocs', 'searchWeb']);
+  return { docs: v.searchDocs !== false, web: v.searchWeb !== false };
+}
 chrome.storage.onChanged.addListener((ch, area) => {
+  if (area === 'local' && (ch.searchDocs || ch.searchWeb)) searchModes().then((m) => chrome.runtime.sendMessage({ target: 'offscreen', type: 'modes', ...m }).catch(() => {}));
   if (area === 'local' && ch.docsUpdatedAt) chrome.runtime.sendMessage({ target: 'offscreen', type: 'docs' }).catch(() => {});
   if (area === 'local' && ch.bridge) {
     const b = ch.bridge.newValue;
@@ -61,7 +67,7 @@ async function startTab(tab, panelOpened) {
   const page = await readPage(tab);
   chrome.action.setBadgeText({ text: '…', tabId: tab.id });
   chrome.action.setBadgeBackgroundColor({ color: '#f2b84b', tabId: tab.id });
-  const r = await send({ type: 'start', streamId, title: tab.title, page, brain: await brainPrefs(), bridge: await bridgeUrl() });
+  const r = await send({ type: 'start', streamId, title: tab.title, page, brain: await brainPrefs(), bridge: await bridgeUrl(), modes: await searchModes() });
   if (r && r.ok === false) throw new Error(r.error || 'could not start');
   chrome.action.setBadgeText({ text: 'ON', tabId: tab.id });
   chrome.action.setTitle({ title: 'J-me: listening to this tab (click to stop)', tabId: tab.id });
@@ -114,7 +120,7 @@ async function startMic() {
   source = { kind: 'mic' };
   chrome.action.setBadgeText({ text: 'MIC' });
   chrome.action.setBadgeBackgroundColor({ color: '#f2b84b' });
-  const r = await send({ type: 'start', mic: true, brain: await brainPrefs(), bridge: await bridgeUrl() });
+  const r = await send({ type: 'start', mic: true, brain: await brainPrefs(), bridge: await bridgeUrl(), modes: await searchModes() });
   if (r && r.ok === false) throw new Error(r.error || 'could not start');
   chrome.action.setTitle({ title: 'J-me: listening to the microphone (switch off in the side panel)' });
 }

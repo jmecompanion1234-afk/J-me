@@ -1,7 +1,11 @@
 // Drive the extension in a real Chrome and play a speech file through it, end to end:
 // ear (VAD + Moonshine in the browser) -> engine -> brain -> queue. Prints what happens.
 //
-//   node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR] [--mic] [--pause] [--bridge]
+//   node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR] [--mic] [--pause] [--bridge] [--docs [DIR]] [--modes docs,web] [--shots DIR]
+//
+// --docs seeds the documents in DIR (default samples/docs) through the settings page's own store.
+// --modes sets the two search switches (docs, web; both on by default). --shots saves screenshots
+// of the side panel into DIR as it runs (for sharing).
 //
 // --mic feeds the file through Chrome's fake microphone instead (the side panel's switch path):
 // permission is auto-granted, the panel page is opened in a tab and its cards are counted.
@@ -17,12 +21,20 @@ import path from 'node:path';
 import os from 'node:os';
 
 const args = process.argv.slice(2);
-const file = args.find((a) => !a.startsWith('--'));
+const valued = ['--brain', '--seconds', '--profile', '--modes', '--shots', '--docs'];
+const file = args.find((a, i) => /\.(wav|mp3)$/i.test(a) || (!a.startsWith('--') && !(i > 0 && valued.includes(args[i - 1]))));
 const opt = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 ? args[i + 1] : d; };
 if (!file) { console.error('usage: node tools/ext_test.mjs FILE.wav [--brain ollama|builtin|webllm] [--seconds N] [--profile DIR]'); process.exit(2); }
 const brainOrder = opt('brain', '') ? [opt('brain')] : undefined;
 const seconds = Number(opt('seconds', 0));
 const mic = args.includes('--mic');
+const docsArg = args.includes('--docs') ? args[args.indexOf('--docs') + 1] : undefined;
+const docsDir = args.includes('--docs') ? (docsArg && !docsArg.startsWith('--') && docsArg !== file ? docsArg : 'samples/docs') : null;
+const modes = opt('modes', 'docs,web').split(',');
+const shots = opt('shots', '');
+if (shots) await fs.mkdir(shots, { recursive: true });
+let shotN = 0;
+const shot = async (page, name) => { if (!shots) return; const f = path.join(shots, `${String(++shotN).padStart(2, '0')}-${name}.png`); await page.screenshot({ path: f }); console.log(`  📷 ${f}`); };
 // --bridge: run the agent bridge in this process, point the extension at it, and at the end
 // read the state back and push an agent ask through it.
 const bridge = args.includes('--bridge') ? new Bridge() : null;
@@ -50,6 +62,8 @@ await sw.evaluate(async (order) => {
   await chrome.storage.local.set({ brainOrder: order ?? [] }); // before the install-time warm-up fires
   await ensureOffscreen();
 }, brainOrder ?? null);
+await sw.evaluate((m) => chrome.storage.local.set({ searchDocs: m.includes('docs'), searchWeb: m.includes('web') }), modes);
+console.log('search switches:', modes.join(' + '));
 // The offscreen page's module is a few MB; wait until it answers.
 const send = async (msg) => {
   for (let i = 0; i < 60; i++) {
@@ -86,18 +100,23 @@ if (!prep || !prep.ok) { clearInterval(pumping); await ctx.close(); server.close
 // The side panel page is opened as a tab in both modes: its cards are counted at the end, and
 // a tick must not rebuild them (node identity is checked, which is what the flicker was).
 // --docs: seed two documents through the settings page's own store, so cards can hit them.
-if (args.includes('--docs')) {
+if (docsDir) {
+  const files = [];
+  for (const name of (await fs.readdir(docsDir)).sort()) {
+    if (!/\.(md|txt|markdown)$/i.test(name)) continue;
+    const text = await fs.readFile(path.join(docsDir, name), 'utf8');
+    files.push({ name, text, size: Buffer.byteLength(text) });
+  }
   const opts = await ctx.newPage();
   await opts.goto(sw.url().replace(/sw\.js$/, 'options.html'));
   await opts.waitForFunction(() => !!window.__jmeDocs);
-  await opts.evaluate(() => window.__jmeDocs.save([
-    { name: 'notes/antikythera.md', text: '# Antikythera mechanism notes\n\nOur museum loan of the Antikythera mechanism fragments runs until March. The eclipse prediction dial (the Saros dial) is the piece the exhibit designer wants lit from behind.\n\n## Gearing\n\nThe gearing precision of the Antikythera mechanism is the point of the second room: nothing comparable until the astronomical clocks of the 14th century.', size: 400 },
-    { name: 'minutes/2026-11-01.md', text: '# Meeting 1 Nov\n\nAgreed: the Library of Alexandria panel says it declined over centuries, not one fire. Caesar in 48 BC is a footnote, not the headline.', size: 200 },
-  ], 'exhibit-notes'));
+  await opts.evaluate(([f, folder]) => window.__jmeDocs.save(f, folder), [files, path.basename(path.resolve(docsDir))]);
   console.log('documents seeded:', JSON.stringify(await opts.evaluate(async () => { const s = await window.__jmeDocs.load(); return { folder: s.folder, files: s.files.map((f) => f.name) }; })));
+  await shot(opts, 'settings-documents');
   await opts.close();
 }
 const panel = await ctx.newPage();
+if (shots) await panel.setViewportSize({ width: 600, height: 960 });
 await panel.goto(sw.url().replace(/sw\.js$/, 'panel.html'));
 panel.on('pageerror', (e) => console.log('panel page error:', e.message));
 if (mic) {
@@ -106,14 +125,17 @@ if (mic) {
   console.log('panel says:', await panel.evaluate(() => document.getElementById('state').textContent));
 } else {
   const page = { title: 'Two friends on the Antikythera mechanism (demo)', author: 'J-me samples', description: 'A scripted chat about the Antikythera mechanism, the Library of Alexandria and what gets lost.', url: 'https://example.invalid/demo' };
+  await sw.evaluate(() => { source = { kind: 'tab', tabId: 0 }; }); // so the panel's state line reads as it does in use
   const r = await send({ type: 'start', file: url, page, brain: brainOrder ? { order: brainOrder } : {}, ...(bridge ? { bridge: `http://127.0.0.1:${bridgePort}` } : {}) });
   console.log('start:', JSON.stringify(r));
 }
 const deadline = Date.now() + (seconds ? seconds * 1000 : 20 * 60 * 1000);
 const pauseAt = args.includes('--pause') ? Date.now() + 20_000 : Infinity; // hold 25 s in the middle, then catch up
 let pausedAt = 0;
+const shotAt = shots ? [40, 80, 120, 150].map((t) => t0 + t * 1000) : [];
 while (!done && Date.now() < deadline) {
   await new Promise((r) => setTimeout(r, 1000));
+  if (shotAt.length && Date.now() >= shotAt[0]) { shotAt.shift(); await shot(panel, 'panel'); }
   if (!pausedAt && Date.now() >= pauseAt) { pausedAt = Date.now(); await send({ type: 'ws', msg: { type: 'pause' } }); console.log(`${since()}  >> pause`); }
   else if (pausedAt > 0 && Date.now() - pausedAt > 25_000) { pausedAt = -1; await send({ type: 'ws', msg: { type: 'resume' } }); console.log(`${since()}  >> resume`); }
 }
@@ -152,6 +174,19 @@ for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(
   });
   console.log('side panel shows:', JSON.stringify(seen));
 }
+if (shots) {
+  // Open the first card that carries a document paragraph, so the green block is in the picture.
+  const opened = await panel.evaluate(() => {
+    const root = document.getElementById('jme-overlay').shadowRoot;
+    const c = [...root.querySelectorAll('.card')].find((n) => !n.classList.contains('prompt')) || root.querySelector('.card');
+    if (!c) return null;
+    c.querySelector('.t span').click();
+    return c.querySelector('.t span').textContent;
+  });
+  await new Promise((r) => setTimeout(r, 1200));
+  console.log('opened card:', opened);
+}
+await shot(panel, 'panel-end');
 await send({ type: 'stop' });
 if (bridge) { await new Promise((r) => setTimeout(r, 800)); console.log('bridge after stop: listening=' + bridge.state.listening); bridge.close(); }
 await ctx.close();

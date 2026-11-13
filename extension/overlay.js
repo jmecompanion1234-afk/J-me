@@ -21,6 +21,7 @@
 .bar b{font-weight:700}.bar .st{color:#8a8f9c;font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar button{all:unset;cursor:pointer;color:#8a8f9c;padding:0 4px;font-size:16px}
 .bar button.pause{font-size:14px}.bar button.pause.on{color:#f2b84b}
+.bar button.mode{font-size:11px;border:1px solid #262a33;border-radius:10px;padding:1px 7px;color:#5c616d;line-height:16px}.bar button.mode.on{color:#e8e8ec;border-color:#f2b84b}
 .box.paused .list{outline:1px solid #f2b84b;outline-offset:-1px}
 .imgs{display:none;gap:4px;overflow-x:auto;padding:6px 8px;border-bottom:1px solid #262a33;scrollbar-width:thin}
 .imgs.on{display:flex}
@@ -66,7 +67,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
 .ask button{all:unset;cursor:pointer;background:#f2b84b;color:#111;border-radius:6px;padding:6px 10px;font-weight:600;font-size:13px}
 </style>
 <div class="box">
-  <div class="bar"><b>J-me</b><span class="st">starting…</span><button class="pause" title="Hold the cards still (the transcript keeps going); press again to catch up">⏸</button>${PANEL ? '' : '<button class="min" title="Collapse">–</button><button class="x" title="Hide">×</button>'}</div>
+  <div class="bar"><b>J-me</b><span class="st">starting…</span><button class="mode docs" title="Search your documents (the folder chosen in settings)">📄 docs</button><button class="mode web" title="Search the web">🌐 web</button><button class="pause" title="Hold the cards still (the transcript keeps going); press again to catch up">⏸</button>${PANEL ? '' : '<button class="min" title="Collapse">–</button><button class="x" title="Hide">×</button>'}</div>
   <div class="player"><div class="pb"><span></span><a target="_blank" rel="noopener">open on YouTube ↗</a><button title="Close">×</button></div></div>
   <div class="imgs"></div>
   <div class="vids"></div>
@@ -260,6 +261,15 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
   const pauseBtn = q('.pause');
   const setPaused = (p) => { paused = p; pauseBtn.textContent = p ? '▶' : '⏸'; pauseBtn.classList.toggle('on', p); q('.box').classList.toggle('paused', p); pauseBtn.title = p ? 'Let the cards run again and catch up on what was said' : 'Hold the cards still (the transcript keeps going); press again to catch up'; };
   pauseBtn.onclick = () => send({ type: paused ? 'resume' : 'pause' });
+  // The two search switches: your documents, the web. Stored, so the service worker tells the
+  // engine and every J-me view shows the same state.
+  const modes = { docs: true, web: true };
+  const modeBtn = { docs: q('.mode.docs'), web: q('.mode.web') };
+  const showModes = () => { for (const k in modeBtn) modeBtn[k].classList.toggle('on', modes[k]); };
+  chrome.storage.local.get(['searchDocs', 'searchWeb']).then((v) => { modes.docs = v.searchDocs !== false; modes.web = v.searchWeb !== false; showModes(); });
+  chrome.storage.onChanged.addListener((ch, area) => { if (area !== 'local') return; if (ch.searchDocs) modes.docs = ch.searchDocs.newValue !== false; if (ch.searchWeb) modes.web = ch.searchWeb.newValue !== false; showModes(); });
+  modeBtn.docs.onclick = () => chrome.storage.local.set({ searchDocs: !modes.docs });
+  modeBtn.web.onclick = () => chrome.storage.local.set({ searchWeb: !modes.web });
   askForm.onsubmit = (e) => { e.preventDefault(); const t = askInput.value.trim(); if (t) { send({ type: 'ask', text: t }); askInput.value = ''; } };
   if (!PANEL) {
     q('.x').onclick = () => { host.style.display = 'none'; };

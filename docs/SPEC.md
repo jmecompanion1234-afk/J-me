@@ -301,6 +301,15 @@ whatever media is chosen. What that means for each shape:
   the brain's context so it proposes lookups in their terms. Hits render as a green block
   with the paragraph. Steps 2 to 4 (embeddings, meeting sets, inter-organizational) remain
   in `docs/NEXT.md`; inter-organizational stays last and starts with a conversation.
+- **The two search switches (v0.8.1, 2026-11-13).** The maintainer: "give it a toggle for rag mode
+  and one for internet mode". Two pills in the bar, 📄 docs and 🌐 web, stored as
+  `searchDocs` / `searchWeb` (both on by default); the service worker sends them with
+  `start` and forwards changes as a `modes` message; the offscreen page keeps the index
+  loaded and sets `engine.opts.docs` / `fetchWeb` from the switches, so a flip takes
+  effect on the next card without restarting. The same switches sit on the settings page.
+  `samples/docs/` (four short exhibit-team files on the Antikythera demo) is the sample
+  folder; the harness seeds it with `--docs`, sets the switches with `--modes`, and saves
+  side-panel screenshots with `--shots DIR`.
 
 The engine stays the same under all four: a text-in / events-out plug-in (section 9a; the
 segment door and its `docs/API.md` are the next build), with the audio ear as one optional

@@ -71,6 +71,13 @@ web; a hit shows as a green block with the paragraph. The brain is told which do
 are on hand, so in a meeting it proposes "the indemnity clause" from the contract rather
 than a web search. Choose the folder again after the files change.
 
+**The two search switches.** The bar has two pills, **📄 docs** and **🌐 web**. Each
+switches one source on or off while J-me runs, and the same two switches are on the
+settings page. Documents only, for a meeting that must not leave the room; web only, for
+a podcast; both, for a lecture with your notes beside it. With both off the cards still
+come from the calculator and the brain. To try it, choose `samples/docs` from the J-me
+folder and play the demo transcript (two friends on the Antikythera mechanism).
+
 **Settings** (⚙ in the panel): which AI the cards hand off to, the microphone
 permission, which brain to use, and, optionally, your own API key so the answer appears
 inside the card (**Answer here**) while the video keeps playing. Without a key, "Ask
