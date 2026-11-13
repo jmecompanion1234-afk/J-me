@@ -64,6 +64,22 @@ check yourself as you go. Chrome asks for the microphone once, on the settings p
 in the panel, or the extension's Options). The panel also shows the cards while a tab is
 being listened to, if you prefer it to the overlay.
 
+**Say it out loud.** The cues J-me listens for, in anyone's voice in the conversation:
+
+- "Let's ask Perplexity …", "ask ChatGPT …", "can you ask Claude …": the rest of the
+  sentence (or the next sentence) becomes a prompt card, pinned at the top, with the Ask
+  button pointing at the AI that was named, whatever the default in settings. With a key
+  under "Answer inside J-me" the answer can appear in the card too.
+- "Pull up a picture of …", "show me a photo of …", "what does … look like": a card with
+  a full strip of pictures of it and no videos.
+- "Pull up a video of …", "let's watch the clip of …": a card with videos and no pictures.
+- "Pull up the …", "look up the …" at the start of a sentence: a lookup card.
+
+The cue needs the verb and the object, so "pull up a chair" and "look up at the sky" stay
+quiet. A card made this way is pinned; press ☆ to release it. `samples/cues.txt` is a
+scripted episode with every cue in it, and `tools/tts_sample.ps1` speaks it into a wav for
+the harness.
+
 **Your own documents.** On the settings page, choose a folder of your files (notes,
 minutes, contracts, specs: text, markdown, HTML, JSON, CSV). J-me reads them once, keeps
 the text on this machine, and from then on every card searches your documents before the

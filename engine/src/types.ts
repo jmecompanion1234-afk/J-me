@@ -76,6 +76,10 @@ export interface QueueItem {
   answer?: string;
   /** which providers answered */
   sources?: string[];
+  /** a spoken cue named the AI to hand this to ("let's ask Perplexity…") */
+  service?: 'chatgpt' | 'claude' | 'perplexity';
+  /** a spoken cue asked for pictures or videos of it */
+  wants?: 'images' | 'videos';
 }
 
 export interface Candidate {
@@ -83,6 +87,8 @@ export interface Candidate {
   text: string;
   why: string;
   confidence: number;
+  service?: 'chatgpt' | 'claude' | 'perplexity';
+  wants?: 'images' | 'videos';
 }
 
 export interface DecayParams {

@@ -310,6 +310,23 @@ whatever media is chosen. What that means for each shape:
   `samples/docs/` (four short exhibit-team files on the Antikythera demo) is the sample
   folder; the harness seeds it with `--docs`, sets the switches with `--modes`, and saves
   side-panel screenshots with `--shots DIR`.
+- **Spoken cues (v0.9.0, 2026-11-13).** The maintainer, after watching a big podcast's host ask a
+  guest to text them an image: "a trigger phrase like 'Let's ask Perplexity X' … then it
+  turns the next question into a prompt automatically. Same with 'Pull up an image of so and
+  so'." `engine/src/cues.ts`: per sentence, `ask <service> …` (with the mishearings "cloud",
+  "chat g p t"), `pull up / show me a picture of …`, `what does … look like`, `pull up a
+  video of …`, and a sentence-opening `pull up / look up the …`. A cue fires on the segment
+  (ahead of the anticipator), is admitted at confidence 1 and pinned; a cue that ends its
+  sentence takes the next sentence or the next segment (12 s) as its text. Items carry
+  `service` (the card's Ask button goes to the named AI) and `wants` (`images`: eight
+  pictures, no videos; `videos`: six videos, no pictures). This is the ruling's spirit: no
+  commands for the user, a cue heard in the room. `tools/cues_check.mjs` holds 20 sentences
+  (14 fire, 6 must not); `samples/cues.txt` + `tools/tts_sample.ps1` make the spoken demo.
+- **Calculator, the named whole (v0.9.0).** "35% of the fragments are gearing, 50% are case
+  plates, and 30% are inscriptions" was missed: every "N% of …" had been excluded as a
+  different whole. Now the single "N% of the <whole> are" that opens a breakdown counts as a
+  part of the whole the bare percentages share (two "of" phrases stay two wholes). Checked:
+  three fallacies caught, four quiet sentences still quiet.
 
 The engine stays the same under all four: a text-in / events-out plug-in (section 9a; the
 segment door and its `docs/API.md` are the next build), with the audio ear as one optional

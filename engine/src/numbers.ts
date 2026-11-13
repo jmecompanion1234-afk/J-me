@@ -62,6 +62,12 @@ export function findNumberIssues(text: string): NumberIssue[] {
       const re = /(\d+(?:\.\d+)?)%(?!\s*(?:of|more|less|higher|lower|up|down))/g;
       let m: RegExpExecArray | null;
       while ((m = re.exec(s))) parts.push(Number(m[1]));
+      // "35% of the fragments are gearing, 50% are plates, 30% are inscriptions": the one "N% of
+      // the <whole> are" opens the breakdown and names the whole the bare percentages share. Only
+      // when it is the only "of" phrase (two of them are two wholes) and it is followed by bare parts.
+      const ofs = s.match(/(\d+(?:\.\d+)?)%\s*of\b/g) ?? [];
+      const whole = /(\d+(?:\.\d+)?)%\s*of\s+(?:the|these|those|all|all the|all of the|our|its|their|his|her)\s+[\w' -]{1,40}?\s+(?:is|are|was|were)\b/.exec(s);
+      if (ofs.length === 1 && whole && parts.length >= 1) parts.unshift(Number(whole[1]));
       if (parts.length >= 2) {
         const sum = parts.reduce((a, b) => a + b, 0);
         if (sum > 100.5) out.push({ claim: raw, calc: `${parts.map(fmt).join('% + ')}% = ${fmt(sum)}%. Parts of one whole cannot add to more than 100%.` });

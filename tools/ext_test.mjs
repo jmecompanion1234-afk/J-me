@@ -112,6 +112,7 @@ if (docsDir) {
   await opts.waitForFunction(() => !!window.__jmeDocs);
   await opts.evaluate(([f, folder]) => window.__jmeDocs.save(f, folder), [files, path.basename(path.resolve(docsDir))]);
   console.log('documents seeded:', JSON.stringify(await opts.evaluate(async () => { const s = await window.__jmeDocs.load(); return { folder: s.folder, files: s.files.map((f) => f.name) }; })));
+  await opts.evaluate(() => document.getElementById('docspick').scrollIntoView({ block: 'center' }));
   await shot(opts, 'settings-documents');
   await opts.close();
 }

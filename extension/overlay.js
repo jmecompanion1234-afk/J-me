@@ -108,8 +108,10 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
     const ctx = moment ? `\n\nContext, from a conversation I am listening to: "${moment}"` : '';
     return it.kind === 'prompt' ? it.text + ctx : `${it.text}\n\nWhat should I know about this?` + ctx;
   };
+  // A card born from "let's ask Perplexity…" hands off to the AI that was named, whatever the default.
+  const svcFor = (it) => (it.service && SERVICES[it.service] ? it.service : svc);
   const aiLink = (it, small) => (frontier ? `<a class="ai${small ? ' small' : ''} here" href="#" data-answer="${esc(it.id)}">Answer here</a> ` : '') +
-    `<a class="ai${small || frontier ? ' small' : ''}" href="${esc(SERVICES[svc][1](encodeURIComponent(promptFor(it))))}" target="_blank" rel="noopener" data-beside="ai">${frontier ? 'or in ' : 'Ask '}${SERVICES[svc][0]} ↗</a>`;
+    `<a class="ai${small || frontier ? ' small' : ''}" href="${esc(SERVICES[svcFor(it)][1](encodeURIComponent(promptFor(it))))}" target="_blank" rel="noopener" data-beside="ai">${frontier ? 'or in ' : 'Ask '}${SERVICES[svcFor(it)][0]} ↗</a>`;
 
   // Rendering is keyed by item (and by picture): a tick updates nodes in place, so nothing
   // flickers, the list keeps its scroll position and pictures are not reloaded.
@@ -222,7 +224,7 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
       if (!c) { c = document.createElement('div'); cardNodes.set(it.id, c); c.dataset.sig = ''; }
       c.className = 'card' + (it.state === 'pinned' ? ' pinned' : '') + (it.kind === 'prompt' ? ' prompt' : '') + (it.kind === 'math' ? ' math' : '');
       c.style.opacity = (0.4 + 0.6 * it.score).toFixed(2);
-      const sig = [it.state, it.text, it.why, (it.results || []).length, it.answer ? it.answer.length : 0, open === it.id, svc, !!frontier].join('\u0001');
+      const sig = [it.state, it.text, it.why, (it.results || []).length, it.answer ? it.answer.length : 0, open === it.id, svcFor(it), !!frontier].join('\u0001');
       if (c.dataset.sig !== sig) {
         c.dataset.sig = sig;
         c.innerHTML = cardHtml(it);

@@ -8,6 +8,7 @@ import { wikiLookup } from './providers/wiki.ts';
 import { commonsImages } from './providers/images.ts';
 import { youtubeSearch } from './providers/video.ts';
 import { findNumberIssues, hasFigure } from './numbers.ts';
+import { findCues, cleanCue, type Cue } from './cues.ts';
 import type { DocSearch } from './providers/docindex.ts';
 
 export interface EngineOptions {
@@ -122,6 +123,7 @@ export class Engine {
     this.now = Math.max(this.now, seg.t1);
     this.emit({ type: 'segment', segment: seg });
     this.checkNumbers(seg);
+    this.checkCues(seg);
     if (this.pausedAt === null && this.now - this.lastAnticipate >= this.opts.anticipateEvery && !this.anticipating) {
       this.lastAnticipate = this.now;
       this.anticipating = this.anticipate().finally(() => (this.anticipating = null));
@@ -166,6 +168,40 @@ export class Engine {
   /** The calculator: a segment whose own numbers contradict each other becomes a card at once,
    *  no model involved. The last two segments are checked together (a sentence can span a cut). */
   private lastChecked = '';
+  /** A cue whose sentence ended before the question ("Let's ask Perplexity." …"Did it predict eclipses?"). */
+  private pendingCue: { cue: Cue; until: number } | null = null;
+
+  /** Spoken cues ("let's ask Perplexity…", "pull up a picture of…") become cards at once, pinned. */
+  private checkCues(seg: TranscriptSegment): void {
+    const cues = findCues(seg.text);
+    if (!cues.length && this.pendingCue && this.now <= this.pendingCue.until) {
+      const text = cleanCue(seg.text);
+      const cue = this.pendingCue.cue;
+      this.pendingCue = null;
+      if (text) this.admitCue({ ...cue, text }, seg);
+      return;
+    }
+    for (const cue of cues) {
+      if (!cue.text) { this.pendingCue = { cue, until: this.now + 12 }; continue; }
+      this.pendingCue = null;
+      this.admitCue(cue, seg);
+    }
+  }
+
+  private admitCue(cue: Cue, seg: TranscriptSegment): void {
+    const names = { chatgpt: 'ChatGPT', claude: 'Claude', perplexity: 'Perplexity' } as const;
+    const kind = cue.kind === 'ask' ? 'prompt' : cue.kind === 'lookup' ? 'lookup' : 'search';
+    const why = cue.kind === 'ask' ? `asked out loud, for ${names[cue.service ?? 'chatgpt']} ("${cue.phrase}")`
+      : cue.kind === 'images' ? `asked out loud for a picture ("${cue.phrase}")`
+      : cue.kind === 'videos' ? `asked out loud for a video ("${cue.phrase}")`
+      : `asked out loud ("${cue.phrase}")`;
+    const [item] = this.queue.admit([{ kind, text: cue.text, why, confidence: 1, ...(cue.service ? { service: cue.service } : {}), ...(cue.kind === 'images' || cue.kind === 'videos' ? { wants: cue.kind } : {}) }], [seg], this.now);
+    if (item) {
+      this.queue.pin(item.id, this.now);
+      this.stage(item);
+    }
+  }
+
   private checkNumbers(seg: TranscriptSegment): void {
     const prev = this.transcript.segments[this.transcript.segments.length - 2];
     const texts = [seg.text, prev ? `${prev.text} ${seg.text}` : ''].filter(Boolean);
@@ -252,13 +288,19 @@ export class Engine {
             for (const r of found) if (!sources.includes(r.source)) sources.push(r.source);
           })());
         }
+        // A spoken "pull up a picture of…" gets a full strip of pictures and no videos (and the
+        // other way round); otherwise the usual few of each.
         const images: ImageResult[] = [];
-        if (this.opts.fetchImages && this.opts.fetchWeb && item.kind !== 'prompt') {
-          jobs.push((this.opts.images ?? defaultImages)(item.text, item.kind).then((found) => { images.push(...found); }, () => {}));
+        const wantImages = this.opts.fetchImages && this.opts.fetchWeb && item.kind !== 'prompt' && item.wants !== 'videos';
+        if (wantImages) {
+          const fetchImages = item.wants === 'images' ? (q: string) => commonsImages(q, 8) : (q: string) => (this.opts.images ?? defaultImages)(q, item.kind);
+          jobs.push(fetchImages(item.text).then((found) => { images.push(...found); }, () => {}));
         }
         const videos: VideoResult[] = [];
-        if (this.opts.fetchVideos && this.opts.fetchWeb && item.kind !== 'prompt') {
-          jobs.push((this.opts.videos ?? defaultVideos)(item.text, item.kind).then((found) => { videos.push(...found); }, () => {}));
+        const wantVideos = this.opts.fetchVideos && this.opts.fetchWeb && item.kind !== 'prompt' && item.wants !== 'images';
+        if (wantVideos) {
+          const fetchVideos = item.wants === 'videos' ? (q: string) => youtubeSearch(q, 6) : (q: string) => (this.opts.videos ?? defaultVideos)(q, item.kind);
+          jobs.push(fetchVideos(item.text).then((found) => { videos.push(...found); }, () => {}));
         }
         const settled = await Promise.allSettled(jobs);
         // The Wikipedia card's own picture leads the strip when there is one.

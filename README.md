@@ -27,6 +27,11 @@ show: nobody asks him to prepare, but when someone says "pull that up," it is up
   Every card also hands off to ChatGPT, Claude or Perplexity in your own account.
 - **For the people watching too.** Run it over a finished episode and publish a
   companion page viewers open next to the video, synced to the player.
+- **Say it out loud.** "Let's ask Perplexity whether…" turns the question into a card handed
+  to Perplexity (or ChatGPT, or Claude, whichever was named). "Pull up a picture of the Saros
+  dial" queues a strip of pictures of it; "pull up a video of Clickspring cutting the gears"
+  queues videos; "pull up the 2006 Nature paper" looks it up. Nothing is typed, and the host
+  never has to ask a guest to text them a link.
 - **Your own documents.** Point it at a folder (notes, minutes, contracts, specs) and
   every card searches your files before the web, on this machine; the brain knows which
   documents are on hand and proposes lookups in their terms. Two pills in the J-me bar,

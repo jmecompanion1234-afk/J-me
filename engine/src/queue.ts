@@ -63,6 +63,8 @@ export class Queue {
         recurrences: 0,
         born: now,
         peak: 0,
+        ...(c.service ? { service: c.service } : {}),
+        ...(c.wants ? { wants: c.wants } : {}),
       };
       this.live.set(id, item);
       born.push(item);

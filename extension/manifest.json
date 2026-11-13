@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "J-me",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "A switch on any tab, or on the microphone: J-me listens and keeps the searches, pictures, videos and questions the talk is about to need, with a hand-off to your own AI. Everything runs in the browser.",
   "minimum_chrome_version": "128",
   "action": {

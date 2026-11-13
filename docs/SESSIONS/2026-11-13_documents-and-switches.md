@@ -1,4 +1,4 @@
-# Session 2026-11-13: your documents (0.8.0) and the two search switches (0.8.1)
+# Session 2026-11-13: your documents (0.8.0), the two search switches (0.8.1), spoken cues (0.9.0)
 
 ## What was built
 
@@ -39,6 +39,43 @@ Claude Code memory monitor while the machine was low on memory (the maintainer's
 8 GB across 33 processes). The Node replay of the same transcript with `--docs samples/docs
 --fetch` ran clean afterwards, and the type check passes. The screenshots for the Skool
 thread wait for a rerun.
+
+## 0.9.0: spoken cues
+
+The maintainer, after watching a big podcast's host ask a guest to text them an image: a trigger
+phrase like "Let's ask Perplexity X" that turns the next question into a prompt, and "pull up
+an image of so and so" that queues pictures. Built as `engine/src/cues.ts`: ask <AI> …,
+pull up / show me a picture of …, what does … look like, pull up a video of …, and a
+sentence-opening pull up / look up the …. A cue fires on its segment, ahead of the brain, and
+the card is pinned; the Ask button goes to the AI that was named; a picture cue gets eight
+pictures and no videos. Twenty sentences in `tools/cues_check.mjs` (14 fire, 6 must stay
+quiet). The calculator also learned that one "N% of the <whole> are" opening a breakdown
+shares the whole with the bare percentages after it.
+
+### The spoken demo
+
+`samples/cues.txt` is a scripted two-voice episode with every cue in it, and
+`tools/tts_sample.ps1` speaks it with Windows text-to-speech (David and Zira, 2:51). Run
+through the extension with documents and web on, Ollama brain:
+
+| what was said | what happened |
+|---|---|
+| "Let's ask Perplexity whether the Antikythera mechanism really predicted eclipses" | prompt card pinned the same second, Ask Perplexity button, answer citing "What it did (antikythera-notes.md)" |
+| "pull up an image of the Saros dial" | picture card pinned, nine pictures, three document blocks |
+| "35% of the fragments are gearing, 50% are case plates, and 30% are inscriptions" | red calculator card at the top: 35 + 50 + 30 = 115% |
+| "Pull up a picture of Michael Wright's model" | picture card, nine pictures |
+| "Pull up a video of Clickspring cutting the gears" | video card, six videos, no pictures |
+| "Ask ChatGPT how a device from 100 BC would have been used" | prompt card, Ask ChatGPT button |
+| "Pull up the 2006 Nature paper on the mechanism" | lookup card, the reading list's entry on it |
+
+All six cues fired on their own segment; 12 cards live at the end, every one carrying a
+document paragraph; 12/12 cards and 16/16 pictures kept across ticks. Six screenshots in
+`sessions/shots/` (gitignored) for the Skool thread.
+
+Known limits seen in the run: the speech model heard "Saros" as "sorrows", so the Commons
+pictures for that card were off (the document blocks were right, because they matched
+"dial"); Commons is literal, so "Michael Wright's model" brought the Wright brothers. A
+picture cue would do better with the page's title added to the picture query.
 
 ## Records
 
