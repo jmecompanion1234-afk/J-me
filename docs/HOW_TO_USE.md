@@ -64,6 +64,13 @@ check yourself as you go. Chrome asks for the microphone once, on the settings p
 in the panel, or the extension's Options). The panel also shows the cards while a tab is
 being listened to, if you prefer it to the overlay.
 
+**Your own documents.** On the settings page, choose a folder of your files (notes,
+minutes, contracts, specs: text, markdown, HTML, JSON, CSV). J-me reads them once, keeps
+the text on this machine, and from then on every card searches your documents before the
+web; a hit shows as a green block with the paragraph. The brain is told which documents
+are on hand, so in a meeting it proposes "the indemnity clause" from the contract rather
+than a web search. Choose the folder again after the files change.
+
 **Settings** (⚙ in the panel): which AI the cards hand off to, the microphone
 permission, which brain to use, and, optionally, your own API key so the answer appears
 inside the card (**Answer here**) while the video keeps playing. Without a key, "Ask

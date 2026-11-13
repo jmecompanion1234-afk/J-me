@@ -18,6 +18,7 @@ async function bridgeUrl() {
   return bridge && bridge.on ? (bridge.url || 'http://127.0.0.1:8788') : null;
 }
 chrome.storage.onChanged.addListener((ch, area) => {
+  if (area === 'local' && ch.docsUpdatedAt) chrome.runtime.sendMessage({ target: 'offscreen', type: 'docs' }).catch(() => {});
   if (area === 'local' && ch.bridge) {
     const b = ch.bridge.newValue;
     chrome.runtime.sendMessage({ target: 'offscreen', type: 'bridge', url: b && b.on ? (b.url || 'http://127.0.0.1:8788') : null }).catch(() => {});

@@ -8,7 +8,7 @@ import { wikiLookup } from './providers/wiki.ts';
 import { commonsImages } from './providers/images.ts';
 import { youtubeSearch } from './providers/video.ts';
 import { findNumberIssues, hasFigure } from './numbers.ts';
-import type { LocalDocs } from './providers/localdocs.ts';
+import type { DocSearch } from './providers/docindex.ts';
 
 export interface EngineOptions {
   mode: Mode;
@@ -22,7 +22,8 @@ export interface EngineOptions {
   fetchWeb: boolean;
   /** answer prompt items with the local model when staged */
   answerPrompts: boolean;
-  docs?: LocalDocs;
+  /** the person's own documents; searched first for every card */
+  docs?: DocSearch;
   /** the web lookup for a staged item; default: Wikipedia card for lookups plus a DuckDuckGo search */
   search?: SearchFn;
   /** pictures for the image strip, fetched with the results (off in a dry backtest) */
@@ -191,7 +192,9 @@ export class Engine {
     const queued = this.queue.snapshot().map((i) => i.text);
     const t0 = Date.now();
     try {
-      const cands = await this.anticipator.propose(text, queued, this.opts.mode, this.opts.context, maxItems);
+      const names = this.opts.docs?.ready ? this.opts.docs.names() : [];
+      const context = [this.opts.context ?? '', names.length ? `Documents on hand (the person's own files; when the talk touches what one likely contains, propose a lookup in its terms): ${names.slice(0, 30).join(', ')}${names.length > 30 ? ` and ${names.length - 30} more` : ''}` : ''].filter(Boolean).join('\n');
+      const cands = await this.anticipator.propose(text, queued, this.opts.mode, context || undefined, maxItems);
       this.stats.anticipatorCalls++;
       this.stats.anticipatorMs += Date.now() - t0;
       this.stats.candidates += cands.length;
@@ -200,7 +203,10 @@ export class Engine {
       const anchor = window.filter((s) => s.t1 >= at - 20);
       // A spoken figure is a priority: it stages without waiting for a recurrence.
       for (const c of cands) if (c.kind !== 'prompt' && hasFigure(c.text)) c.confidence = Math.max(c.confidence, 0.85);
-      this.queue.admit(cands, anchor.length ? anchor : window, at);
+      // A file name is not a card: small brains echo the "documents on hand" list.
+      const lowerNames = new Set(names.map((n) => n.toLowerCase()));
+      const kept = cands.filter((c) => !lowerNames.has(c.text.toLowerCase()) && !/[\/].*\.\w{2,5}$|\.(md|txt|html?|json|csv|markdown)$/i.test(c.text));
+      this.queue.admit(kept, anchor.length ? anchor : window, at);
     } catch (e) {
       this.emit({ type: 'error', now: at, text: `anticipator: ${e instanceof Error ? e.message : String(e)}` });
     }

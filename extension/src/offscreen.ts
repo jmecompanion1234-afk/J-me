@@ -10,6 +10,8 @@ import { Ear, configureRuntime } from './ear.ts';
 import { pipeline } from '@huggingface/transformers';
 import { pickBrain, type Brain, type BrainOptions } from './brains.ts';
 import { frontierAnswer, type FrontierSettings } from './frontier.ts';
+import { loadDocIndex } from './docs.ts';
+import type { DocIndex } from '../../engine/src/providers/docindex.ts';
 import { ANTICIPATOR_SYSTEM } from '../../engine/src/anticipator.ts';
 
 const SAMPLE_RATE = 16000;
@@ -32,6 +34,12 @@ let fileSource: AudioBufferSourceNode | null = null;
 let engine: Engine | null = null;
 let ear: Ear | null = null;
 let brain: Brain | null = null;
+let docs: DocIndex | null = null;
+async function reloadDocs(): Promise<void> {
+  try { docs = await loadDocIndex(); } catch (e) { docs = null; status('documents: ' + errText(e)); }
+  if (engine) (engine.opts as { docs?: DocIndex }).docs = docs ?? undefined;
+  if (docs) status(`documents on hand: ${docs.names().length} files, ${docs.size} paragraphs`);
+}
 let ticker: ReturnType<typeof setInterval> | null = null;
 let started = 0;
 const clock = () => (Date.now() - started) / 1000;
@@ -244,7 +252,8 @@ async function start(m: StartMessage): Promise<void> {
   const title = p.title || m.title || '';
   const context = [title ? `Title: ${title}` : '', p.author ? `By: ${p.author}` : '', p.description ? `Description: ${p.description}` : '', p.url ? `URL: ${p.url}` : '']
     .filter(Boolean).join('\n');
-  engine = new Engine({ mode, fetchWeb: true, answerPrompts: true, search: browserSearch, ...(context ? { context } : {}) });
+  await reloadDocs();
+  engine = new Engine({ mode, fetchWeb: true, answerPrompts: true, search: browserSearch, ...(context ? { context } : {}), ...(docs ? { docs } : {}) });
   engine.on(event);
   event({ type: 'hello', mode, sessionId: new Date().toISOString(), now: 0, ...(title ? { title } : {}) });
   await prepare(m.brain ?? {});
@@ -317,6 +326,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   else if (msg.type === 'prepare') prepare((msg as { brain?: Partial<BrainOptions> }).brain ?? {}).then(() => reply({ ok: true, ear: ear?.device, brain: brain?.name }), (e: unknown) => reply({ ok: false, error: errText(e) }));
   else if (msg.type === 'ws') { command(msg.msg as Command); reply({ ok: true }); }
   else if (msg.type === 'bridge') { setBridge((msg as { url?: string | null }).url ?? null); reply({ ok: true }); }
+  else if (msg.type === 'docs') reloadDocs().then(() => reply({ ok: true, files: docs?.names().length ?? 0 }));
   else if (msg.type === 'chat') (async () => {
     try {
       const m = msg as { messages?: { role: 'system' | 'user'; content: string }[]; opts?: Record<string, unknown>; text?: string };

@@ -292,6 +292,15 @@ whatever media is chosen. What that means for each shape:
   arithmetic, red edge, no fetch). Figures: the brain is told a spoken figure is a priority,
   and any non-prompt candidate carrying a figure stages at confidence 0.85. Conservative on
   purpose: a false flag costs trust.
+- **The documents, step 1 (v0.8.0, 2026-11-13).** The maintainer: "ok lets start on the RAG". The
+  Node engine's folder search became a platform-free `DocIndex` (BM25 over paragraphs,
+  with a relevance floor so a single weak term is not a hit); the settings page reads a
+  chosen folder once (File System Access API, a click) and stores the text in IndexedDB;
+  the offscreen page builds the index from the store, so it needs no folder handle and no
+  gesture; the engine searches it first for every card, and lists the document names in
+  the brain's context so it proposes lookups in their terms. Hits render as a green block
+  with the paragraph. Steps 2 to 4 (embeddings, meeting sets, inter-organizational) remain
+  in `docs/NEXT.md`; inter-organizational stays last and starts with a conversation.
 
 The engine stays the same under all four: a text-in / events-out plug-in (section 9a; the
 segment door and its `docs/API.md` are the next build), with the audio ear as one optional

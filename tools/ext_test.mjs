@@ -85,6 +85,18 @@ if (!prep || !prep.ok) { clearInterval(pumping); await ctx.close(); server.close
 
 // The side panel page is opened as a tab in both modes: its cards are counted at the end, and
 // a tick must not rebuild them (node identity is checked, which is what the flicker was).
+// --docs: seed two documents through the settings page's own store, so cards can hit them.
+if (args.includes('--docs')) {
+  const opts = await ctx.newPage();
+  await opts.goto(sw.url().replace(/sw\.js$/, 'options.html'));
+  await opts.waitForFunction(() => !!window.__jmeDocs);
+  await opts.evaluate(() => window.__jmeDocs.save([
+    { name: 'notes/antikythera.md', text: '# Antikythera mechanism notes\n\nOur museum loan of the Antikythera mechanism fragments runs until March. The eclipse prediction dial (the Saros dial) is the piece the exhibit designer wants lit from behind.\n\n## Gearing\n\nThe gearing precision of the Antikythera mechanism is the point of the second room: nothing comparable until the astronomical clocks of the 14th century.', size: 400 },
+    { name: 'minutes/2026-11-01.md', text: '# Meeting 1 Nov\n\nAgreed: the Library of Alexandria panel says it declined over centuries, not one fire. Caesar in 48 BC is a footnote, not the headline.', size: 200 },
+  ], 'exhibit-notes'));
+  console.log('documents seeded:', JSON.stringify(await opts.evaluate(async () => { const s = await window.__jmeDocs.load(); return { folder: s.folder, files: s.files.map((f) => f.name) }; })));
+  await opts.close();
+}
 const panel = await ctx.newPage();
 await panel.goto(sw.url().replace(/sw\.js$/, 'panel.html'));
 panel.on('pageerror', (e) => console.log('panel page error:', e.message));
@@ -126,7 +138,7 @@ if (bridge) {
 const d = await send({ type: 'drain' });
 await pump();
 console.log(`\nsegments: ${d.segments.length}, live items: ${d.items.length}, expired: ${d.history.length}`);
-for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(6)} ${it.text}  score ${it.score.toFixed(2)}${it.results ? `, ${it.results.length} results` : ''}${it.images && it.images.length ? `, ${it.images.length} pictures` : ''}${it.videos && it.videos.length ? `, ${it.videos.length} videos` : ''}`);
+for (const it of d.items) console.log(`  ${it.state.padEnd(9)} ${it.kind.padEnd(6)} ${it.text}  score ${it.score.toFixed(2)}${it.results ? `, ${it.results.length} results` : ''}${it.results && it.results.some((r) => r.source === 'docs') ? ` [📄 ${it.results.filter((r) => r.source === 'docs').map((r) => r.title).join('; ')}]` : ''}${it.images && it.images.length ? `, ${it.images.length} pictures` : ''}${it.videos && it.videos.length ? `, ${it.videos.length} videos` : ''}`);
 {
   const seen = await panel.evaluate(async () => {
     const root = document.getElementById('jme-overlay').shadowRoot;

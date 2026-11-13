@@ -47,11 +47,12 @@ keyword index (BM25), results marked `docs`. It is not in the extension.
 
 **The plan, in steps that are each useful on their own.**
 
-1. **The extension reads a folder.** The settings page gets "Documents: choose a folder";
-   the File System Access API keeps the handle, the files are indexed in the browser
-   (keyword index first, as in Node; text, markdown, PDF via a wasm reader). Items get
-   `docs` results above the web ones. Two to three days. This alone is the "internal
-   RAG" most people mean.
+1. **The extension reads a folder.** DONE 2026-11-13 (v0.8.0): the settings page reads
+   the chosen folder once (text, markdown, HTML, JSON, CSV; no PDF yet) and stores the
+   text in IndexedDB; the offscreen page builds the same BM25 index the Node engine uses
+   (`engine/src/providers/docindex.ts`); every card gets `docs` results above the web
+   ones; the brain is told which documents are on hand. Still to do in this step: PDF
+   (a wasm reader) and re-reading a changed folder without choosing it again.
 2. **Semantic, still local.** A small embedding model in the same runtime
    (transformers.js has several) so "the indemnity clause" finds the paragraph that
    never says "indemnity". Two days. Worth it once step 1 shows people use it.

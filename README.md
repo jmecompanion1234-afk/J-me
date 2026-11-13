@@ -27,6 +27,9 @@ show: nobody asks him to prepare, but when someone says "pull that up," it is up
   Every card also hands off to ChatGPT, Claude or Perplexity in your own account.
 - **For the people watching too.** Run it over a finished episode and publish a
   companion page viewers open next to the video, synced to the player.
+- **Your own documents.** Point it at a folder (notes, minutes, contracts, specs) and
+  every card searches your files before the web, on this machine; the brain knows which
+  documents are on hand and proposes lookups in their terms.
 - **For your agents.** Switch on "share with a local agent" and `node engine/src/mcp.ts`
   is an MCP server (Claude Code, Codex, Cursor, Cortext): the live cards, the transcript,
   ask, pin, pause, wait for the next card. Nothing leaves the machine. See

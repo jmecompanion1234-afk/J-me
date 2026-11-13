@@ -11,6 +11,7 @@
   label { display: block; margin: 4px 0; cursor: pointer; } input[type=radio] { margin-right: 8px; }
   input[type=text], input[type=password] { font: inherit; background: #0f1115; color: #e8e8ec; border: 1px solid #262a33; border-radius: 6px; padding: 6px 8px; width: 100%; max-width: 360px; margin-top: 2px; }
   select { font: inherit; background: #0f1115; color: #e8e8ec; border: 1px solid #262a33; border-radius: 6px; padding: 6px 8px; }
+  button.ghost { background: transparent; color: #8a8f9c; border: 1px solid #262a33; }
   button { font: inherit; background: #f2b84b; color: #111; border: 0; border-radius: 6px; padding: 7px 12px; font-weight: 600; cursor: pointer; }
   #micstate { margin-left: 10px; color: #8a8f9c; font-size: 13px; }
   code { background: #0f1115; padding: 1px 5px; border-radius: 4px; }
@@ -47,6 +48,14 @@
   </section>
 
   <section>
+    <h2>Your documents (optional)</h2>
+    <p>Choose a folder of your own files (notes, minutes, contracts, specs: .md, .txt, .html, .json, .csv). J-me reads them once, keeps the text on this machine, and every card searches them before the web. Choose the folder again after you change the files.</p>
+    <button id="docspick">Choose a folder</button> <button id="docsforget" class="ghost">Forget them</button>
+    <p id="docsstate"></p>
+    <p id="docslist" style="font-size:12px"></p>
+  </section>
+
+  <section>
     <h2>Share with a local agent (optional)</h2>
     <p>Sends the transcript and the cards to a small program on this machine, so your own agents can read them and ask questions into the queue. Run <code>node engine/src/mcp.ts</code> from the J-me folder; it is an MCP server for Claude Code, Codex, Cursor or Cortext. Nothing leaves the machine. See docs/AGENTS.md.</p>
     <label><input type="checkbox" id="bridgeon"> Share with a local agent</label>
@@ -79,5 +88,6 @@
   </section>
 
   <script src="options.js"></script>
+  <script type="module" src="options-docs.js"></script>
 </body>
 </html>

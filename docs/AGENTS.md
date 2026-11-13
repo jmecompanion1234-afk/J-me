@@ -68,6 +68,9 @@ will not know the difference, but the cards only come from a running J-me.
   people on the call and the agents working for them. Agent asks are labelled and
   rate-limited so the human stream stays the human stream; the pause button is the
   human's override.
+- **The person's documents.** When they have chosen a folder in settings, a card's `links`
+  include hits with `source: "docs"`: the paragraph from their own file. An agent can quote
+  it back with the file name.
 - **The meeting record.** `jme_transcript` plus `jme_cards gone` at the end gives a
   timeline of what was said and what was worth pulling up when.
 

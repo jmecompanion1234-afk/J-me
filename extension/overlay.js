@@ -55,6 +55,7 @@
 .res{margin-top:6px;border-top:1px solid #262a33;padding-top:6px;font-size:13px}
 .res a{color:#6ea8fe;text-decoration:none;display:block;margin-top:4px}.res a:hover{text-decoration:underline}
 .res p{margin:1px 0 0;color:#8a8f9c;font-size:12px}.answer{white-space:pre-wrap;font-size:13px}
+.res .doc{background:#1f2a1f;border:1px solid #2f4a2f;border-radius:6px;padding:6px 8px;margin-top:6px}.res .doc b{color:#9fe0a8;font-weight:600}.res .doc p{color:#cfe5d2;white-space:pre-wrap}
 .hand{margin-top:6px}
 a.ai{display:inline-block;background:#c792ea;color:#111;border-radius:6px;padding:4px 10px;font-weight:600;font-size:12px;text-decoration:none}
 a.ai.small{background:transparent;color:#c792ea;padding:4px 0}a.ai:hover{filter:brightness(1.1)}
@@ -195,7 +196,9 @@ a.ai.here{background:#c792ea;color:#111;padding:4px 10px}.answer{margin-top:6px}
     if (open === it.id) {
       html += '<div class="res">';
       if (it.answer) html += `<div class="answer">${esc(it.answer)}</div>`;
-      for (const r of it.results || []) html += `<a href="${esc(r.url)}" target="_blank" rel="noopener" data-beside="reader">${esc(r.title || r.url)}</a><p>${esc(r.snippet || '')}</p>`;
+      for (const r of it.results || []) html += r.source === 'docs'
+        ? `<div class="doc"><b>📄 ${esc(r.title)}</b><p>${esc(r.snippet || '')}</p></div>`
+        : `<a href="${esc(r.url)}" target="_blank" rel="noopener" data-beside="reader">${esc(r.title || r.url)}</a><p>${esc(r.snippet || '')}</p>`;
       if (!ready) html += `<p>${it.state === 'candidate' ? 'Not fetched yet. Pin it to fetch now.' : it.state === 'staged' ? 'Fetching…' : 'No results.'}</p>`;
       if (it.kind !== 'prompt') html += `<div class="hand">${aiLink(it, true)}</div>`;
       html += '</div>';

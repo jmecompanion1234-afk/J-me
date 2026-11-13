@@ -26,7 +26,7 @@ for (const [from, name] of copies) {
 }
 
 const r = await build({
-  entryPoints: [path.join(EXT, 'src', 'offscreen.ts')],
+  entryPoints: [path.join(EXT, 'src', 'options-docs.ts'), path.join(EXT, 'src', 'offscreen.ts')],
   bundle: true,
   format: 'esm',
   platform: 'browser',
