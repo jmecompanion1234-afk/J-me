@@ -77,6 +77,27 @@ pictures for that card were off (the document blocks were right, because they ma
 "dial"); Commons is literal, so "Michael Wright's model" brought the Wright brothers. A
 picture cue would do better with the page's title added to the picture query.
 
+## Security sweep of the public repo
+
+Asked for after the names came out: is there a key, a `.env`, or anything personal anywhere.
+Checked the whole history of the public branch (every commit, every path that ever existed),
+the working tree including gitignored files, the three release zips kept locally, the git
+config, the dependencies and the GitHub repo settings.
+
+- No API key, token, password or private key in any commit, file or zip. `npm audit`: 0.
+- The one GitHub secret-scanning alert (2026-11-11) is `Mistral3ForConditionalGeneration`,
+  a class name in the bundled transformers library, resolved as a false positive on the day.
+- Every commit and tag is authored by the repo's no-reply identity. No deploy keys, webhooks
+  or Actions secrets. No source maps in the bundle. Build paths do not appear in the zips.
+- Only local-state file is `jme.local.json` (the Ollama model name), gitignored. `sessions/`
+  (gitignored) holds full transcripts of what J-me heard, in plain text, on the device.
+- Two leftovers in the 0.1.0 how-to, gone since 0.2.0 but still in history: a local folder
+  path and a LAN address. Added to the history rewrite that removes the names.
+- Open, product side: the local agent bridge (off by default) answers any origin with no
+  token, so a web page open in the same browser could read the live state while it is on;
+  and since 0.9.0 the answer-inside-J-me request carries up to three document snippets, which
+  `frontier.ts` and the how-to do not yet say. Both for the next release.
+
 ## Records
 
 J-me records live only here, in `docs/SPEC.md` §9b, `docs/NEXT.md` and `docs/LAUNCH.md`,
